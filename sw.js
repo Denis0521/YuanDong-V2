@@ -1,5 +1,5 @@
-// 版本號升級至 v13，強制讓瀏覽器拋棄舊快取，同步載入自動登入與 PDF 檔名修復功能
-const CACHE_NAME = 'learn-record-v13';
+// 版本號升級至 v14，優化非同步與排除 API 快取干擾
+const CACHE_NAME = 'learn-record-v14';
 const urlsToCache = [
   './',
   './index.html',
@@ -31,6 +31,13 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  
+  // 排除所有跨域 API 請求與非 GET 請求（如 Google 授權與上傳 API），避免快取干擾
+  if (event.request.method !== 'GET' || url.hostname.includes('googleapis.com')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {

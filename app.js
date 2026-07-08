@@ -1,3 +1,5 @@
+'use strict';
+
 // ==================== 您的專屬憑證資訊 ====================
 const CLIENT_ID = '130737953356-9t11ein5pe6l7ihvmbnm39jeg9beel9s.apps.googleusercontent.com';
 // ============================================================
@@ -6,7 +8,10 @@ let tokenClient;
 let accessToken = null;
 let spreadsheetId = null;
 let folderId = null;
-let cloudImageData = { fileId1:'', fileId2:'', fileId3:'', fileId4:'' };
+const cloudImageData = { fileId1: '', fileId2: '', fileId3: '', fileId4: '' };
+
+// 輔助函式：縮寫 document.getElementById
+const $ = (id) => document.getElementById(id);
 
 window.addEventListener('load', () => {
     if ('serviceWorker' in navigator) {
@@ -20,13 +25,13 @@ window.addEventListener('load', () => {
             client_id: CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
             callback: async (tokenResponse) => {
-                if (tokenResponse.error !== undefined) {
+                if (tokenResponse.error) {
                     alert('❌ Google 授權失敗：' + tokenResponse.error);
                     return;
                 }
                 accessToken = tokenResponse.access_token;
                 
-                const loginBtn = document.getElementById('loginBtn');
+                const loginBtn = $('loginBtn');
                 loginBtn.innerText = '🟢 已連線雲端';
                 loginBtn.style.backgroundColor = '#34a853';
                 
@@ -35,13 +40,14 @@ window.addEventListener('load', () => {
             },
         });
 
-        // 網頁載入時，自動觸發 Google 帳號登入與授權
+        // 網頁載入時自動觸發授權
         tokenClient.requestAccessToken();
     }
 
-    document.getElementById('seatNumber').value = document.getElementById('ctrlSeat').value;
-    document.getElementById('ctrlSeat').addEventListener('change', function() {
-        document.getElementById('seatNumber').value = this.value;
+    // 綁定座號連動
+    $('seatNumber').value = $('ctrlSeat').value;
+    $('ctrlSeat').addEventListener('change', function() {
+        $('seatNumber').value = this.value;
     });
 });
 
@@ -59,8 +65,10 @@ async function fetchGoogleAPI(url, options = {}) {
         alert('⚠️ 請先完成「Google 帳號登入」授權！');
         throw new Error('未獲得權限');
     }
-    if (!options.headers) options.headers = {};
-    options.headers['Authorization'] = `Bearer ${accessToken}`;
+    
+    const headers = options.headers || {};
+    headers['Authorization'] = `Bearer ${accessToken}`;
+    options.headers = headers;
     
     const response = await fetch(url, options);
     if (!response.ok) {
@@ -74,18 +82,22 @@ async function fetchGoogleAPI(url, options = {}) {
 async function initEnvironment() {
     try {
         const qSheet = "name='幼兒學習區紀錄資料庫' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false";
-        const sheetSearch = await fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(qSheet)}`);
+        const qFolder = "name='幼兒相片雲端備份庫' and mimeType='application/vnd.google-apps.folder' and trashed=false";
         
-        if (sheetSearch.files && sheetSearch.files.length > 0) {
+        // 平行處理：同時搜尋/建立試算表與資料夾，大幅節省時間
+        const [sheetSearch, folderSearch] = await Promise.all([
+            fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(qSheet)}`),
+            fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(qFolder)}`)
+        ]);
+        
+        // 處理試算表
+        if (sheetSearch.files?.length > 0) {
             spreadsheetId = sheetSearch.files[0].id;
         } else {
             const createSheet = await fetchGoogleAPI('https://www.googleapis.com/drive/v3/files', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: '幼兒學習區紀錄資料庫',
-                    mimeType: 'application/vnd.google-apps.spreadsheet'
-                })
+                body: JSON.stringify({ name: '幼兒學習區紀錄資料庫', mimeType: 'application/vnd.google-apps.spreadsheet' })
             });
             spreadsheetId = createSheet.id;
             await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:E1?valueInputOption=USER_ENTERED`, {
@@ -95,19 +107,14 @@ async function initEnvironment() {
             });
         }
 
-        const qFolder = "name='幼兒相片雲端備份庫' and mimeType='application/vnd.google-apps.folder' and trashed=false";
-        const folderSearch = await fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(qFolder)}`);
-        
-        if (folderSearch.files && folderSearch.files.length > 0) {
+        // 處理資料夾
+        if (folderSearch.files?.length > 0) {
             folderId = folderSearch.files[0].id;
         } else {
             const createFolder = await fetchGoogleAPI('https://www.googleapis.com/drive/v3/files', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: '幼兒相片雲端備份庫',
-                    mimeType: 'application/vnd.google-apps.folder'
-                })
+                body: JSON.stringify({ name: '幼兒相片雲端備份庫', mimeType: 'application/vnd.google-apps.folder' })
             });
             folderId = createFolder.id;
         }
@@ -118,49 +125,72 @@ async function initEnvironment() {
     }
 }
 
-function processImage(event, index) {
+// 將圖片載入封裝為 Promise
+const readImageFile = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+});
+
+const loadImage = (src) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+});
+
+async function processImage(event, index) {
     const file = event.target.files[0];
     if (!file) return;
     
-    const seatNum = document.getElementById('ctrlSeat').value || '未知';
-    const stuName = document.getElementById('studentName').value || '未命名';
-    const className = document.getElementById('className').value || '無班級';
+    const seatNum = $('ctrlSeat').value || '未知';
+    const stuName = $('studentName').value || '未命名';
+    const className = $('className').value || '無班級';
     const fileName = `${className}_${seatNum}號_${stuName}_區${index}.jpg`;
 
     showLoading('📸 正在壓縮圖片並上傳至雲端...');
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = async function() {
-            const canvas = document.createElement('canvas');
-            const MAX_SIZE = 600; 
-            let width = img.width, height = img.height;
-            if (width > height) {
-                if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-            } else {
-                if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-            document.getElementById('img' + index).src = dataUrl;
-            document.getElementById('img' + index).style.display = 'block';
-            document.getElementById('ph' + index).style.display = 'none';
-            document.getElementById('del' + index).style.display = 'block';
-            
-            const response = await fetch(dataUrl);
-            const blob = await response.blob();
-            
-            await uploadImageToDrive(blob, fileName, index);
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+    try {
+        const dataSrc = await readImageFile(file);
+        const img = await loadImage(dataSrc);
+        
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 600; 
+        let { width, height } = img;
+        
+        if (width > height && width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        const imgEl = $('img' + index);
+        imgEl.src = dataUrl;
+        imgEl.style.display = 'block';
+        
+        $('ph' + index).style.display = 'none';
+        $('del' + index).style.display = 'block';
+        
+        // 清理記憶體
+        canvas.width = 0; canvas.height = 0;
+
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        
+        await uploadImageToDrive(blob, fileName, index);
+    } catch (err) {
+        hideLoading();
+        alert('❌ 圖片處理失敗：' + err.message);
+    }
 }
 
 async function uploadImageToDrive(blob, filename, imgIndex) {
@@ -199,131 +229,168 @@ async function removeImage(index, event) {
         showLoading('🗑️ 正在從雲端刪除照片...');
         try {
             await fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files/${fileId}`, { method: 'DELETE' });
-        } catch(e) { console.log('檔案可能已不在雲端', e); }
+        } catch(e) { console.warn('檔案可能已不在雲端', e); }
         hideLoading();
     }
-    document.getElementById('img' + index).src = '';
-    document.getElementById('img' + index).style.display = 'none';
-    document.getElementById('del' + index).style.display = 'none';
-    document.getElementById('ph' + index).style.display = 'block';
-    document.getElementById('ph' + index).innerText = '輕觸上傳相片 (區' + index + ')';
-    document.getElementById('file' + index).value = '';
+    
+    const imgEl = $('img' + index);
+    imgEl.src = '';
+    imgEl.style.display = 'none';
+    $('del' + index).style.display = 'none';
+    $('ph' + index).style.display = 'block';
+    $('ph' + index).innerText = `輕觸上傳相片 (區${index})`;
+    $('file' + index).value = '';
     cloudImageData['fileId' + index] = '';
 }
 
 function getFormData() {
     const data = {
-        year: document.getElementById('year').value, term: document.getElementById('term').value,
-        className: document.getElementById('className').value, studentName: document.getElementById('studentName').value,
-        seatNumber: document.getElementById('ctrlSeat').value, recordDate: document.getElementById('recordDate').value,
-        cb1: document.getElementById('cb1').checked, cb2: document.getElementById('cb2').checked,
-        cb3: document.getElementById('cb3').checked, cb4: document.getElementById('cb4').checked,
-        cb5: document.getElementById('cb5').checked, cb6: document.getElementById('cb6').checked,
-        teacherName: document.getElementById('teacherName').value,
+        year: $('year').value, term: $('term').value,
+        className: $('className').value, studentName: $('studentName').value,
+        seatNumber: $('ctrlSeat').value, recordDate: $('recordDate').value,
+        cb1: $('cb1').checked, cb2: $('cb2').checked,
+        cb3: $('cb3').checked, cb4: $('cb4').checked,
+        cb5: $('cb5').checked, cb6: $('cb6').checked,
+        teacherName: $('teacherName').value,
     };
-    for(let i=1; i<=4; i++) {
-        data['pd'+i] = document.getElementById('pd'+i).value; data['pdesc'+i] = document.getElementById('pdesc'+i).value;
-        data['pab'+i] = document.getElementById('pab'+i).value; data['fileId'+i] = cloudImageData['fileId'+i];
+    for(let i = 1; i <= 4; i++) {
+        data['pd' + i] = $('pd' + i).value;
+        data['pdesc' + i] = $('pdesc' + i).value;
+        data['pab' + i] = $('pab' + i).value;
+        data['fileId' + i] = cloudImageData['fileId' + i];
     }
     return data;
 }
 
 async function cloudSave() {
     const data = getFormData();
-    if (!data.seatNumber || !data.studentName) { alert("⚠️ 儲存前請務必填寫「座號」與「幼生姓名」！"); return; }
+    if (!data.seatNumber || !data.studentName) { 
+        alert("⚠️ 儲存前請務必填寫「座號」與「幼生姓名」！"); 
+        return; 
+    }
     
     showLoading("🚀 正在儲存資料至個人雲端試算表...");
     try {
         if (!spreadsheetId) await initEnvironment();
         const readRes = await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E`);
         const values = readRes.values || [];
-        let rowIndex = -1;
-        for (let r = 1; r < values.length; r++) { if (values[r][0] == data.seatNumber) { rowIndex = r + 1; break; } }
+        
+        // 尋找目標座號的索引位置
+        const rowIndex = values.findIndex((row, idx) => idx > 0 && row[0] == data.seatNumber);
+        const actualRow = rowIndex > -1 ? rowIndex + 1 : -1;
         
         const jsonStr = JSON.stringify(data);
         const rowData = [ data.seatNumber, data.className, data.studentName, new Date().toLocaleString(), jsonStr ];
         
-        if (rowIndex > -1) {
-            await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A${rowIndex}:E${rowIndex}?valueInputOption=USER_ENTERED`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [rowData] })
-            });
+        const apiOpts = {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ values: [rowData] })
+        };
+        
+        if (actualRow > -1) {
+            apiOpts.method = 'PUT';
+            await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A${actualRow}:E${actualRow}?valueInputOption=USER_ENTERED`, apiOpts);
         } else {
-            await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E:append?valueInputOption=USER_ENTERED`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [rowData] })
-            });
+            apiOpts.method = 'POST';
+            await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E:append?valueInputOption=USER_ENTERED`, apiOpts);
         }
         hideLoading();
         alert(`✅ 座號 ${data.seatNumber} 號 (${data.studentName}) 的紀錄已安全存入您的雲端硬碟！`);
-    } catch (err) { hideLoading(); alert("❌ 儲存失敗：" + err.message); }
+    } catch (err) { 
+        hideLoading(); 
+        alert("❌ 儲存失敗：" + err.message); 
+    }
 }
 
 async function cloudLoad() {
-    const targetSeat = document.getElementById('ctrlSeat').value.trim();
+    const targetSeat = $('ctrlSeat').value.trim();
     if (!targetSeat) { alert("請輸入想要下載的座號"); return; }
     
-    document.getElementById('seatNumber').value = targetSeat;
+    $('seatNumber').value = targetSeat;
     showLoading(`📥 正在從您的雲端讀取第 ${targetSeat} 號的紀錄與相片...`);
     
     try {
         if (!spreadsheetId) await initEnvironment();
         const readRes = await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E`);
         const values = readRes.values || [];
-        let targetData = null;
-        for (let r = 1; r < values.length; r++) { if (values[r][0] == targetSeat) { targetData = JSON.parse(values[r][4]); break; } }
         
-        if (!targetData) { hideLoading(); alert(`您的雲端庫中尚未建立 ${targetSeat} 號的資料。`); return; }
-        
-        if (targetData.year) document.getElementById('year').value = targetData.year;
-        if (targetData.term) document.getElementById('term').value = targetData.term;
-        if (targetData.className) document.getElementById('className').value = targetData.className;
-        if (targetData.teacherName) document.getElementById('teacherName').value = targetData.teacherName;
-        document.getElementById('studentName').value = targetData.studentName || ''; document.getElementById('recordDate').value = targetData.recordDate || '';
-        for(let c=1; c<=6; c++) document.getElementById('cb'+c).checked = targetData['cb'+c] || false;
-        for(let i=1; i<=4; i++) {
-            document.getElementById('pd'+i).value = targetData['pd'+i] || ''; document.getElementById('pdesc'+i).value = targetData['pdesc'+i] || ''; document.getElementById('pab'+i).value = targetData['pab'+i] || '';
+        const targetRow = values.find(row => row[0] == targetSeat);
+        if (!targetRow || !targetRow[4]) {
+            hideLoading(); 
+            alert(`您的雲端庫中尚未建立 ${targetSeat} 號的資料。`); 
+            return; 
         }
         
-        for (let i = 1; i <= 4; i++) {
+        const targetData = JSON.parse(targetRow[4]);
+        
+        // 批次復原文字與勾選狀態
+        const fields = ['year', 'term', 'className', 'teacherName', 'studentName', 'recordDate'];
+        fields.forEach(f => { if(targetData[f] !== undefined) $(f).value = targetData[f]; });
+        for(let c=1; c<=6; c++) $('cb'+c).checked = targetData['cb'+c] || false;
+        
+        for(let i=1; i<=4; i++) {
+            $('pd'+i).value = targetData['pd'+i] || ''; 
+            $('pdesc'+i).value = targetData['pdesc'+i] || ''; 
+            $('pab'+i).value = targetData['pab'+i] || '';
+            
             const fileId = targetData['fileId' + i];
-            const imgEl = document.getElementById('img' + i); const phEl = document.getElementById('ph' + i); const delEl = document.getElementById('del' + i);
+            const imgEl = $('img' + i); 
+            const phEl = $('ph' + i); 
+            const delEl = $('del' + i);
+            
             if (fileId) {
                 try {
-                    const mediaResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                    const mediaResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { 
+                        headers: { 'Authorization': `Bearer ${accessToken}` } 
+                    });
                     if (!mediaResponse.ok) throw new Error();
                     const blob = await mediaResponse.blob();
-                    imgEl.src = URL.createObjectURL(blob); imgEl.style.display = 'block'; phEl.style.display = 'none'; delEl.style.display = 'block';
+                    imgEl.src = URL.createObjectURL(blob); 
+                    imgEl.style.display = 'block'; 
+                    phEl.style.display = 'none'; 
+                    delEl.style.display = 'block';
                     cloudImageData['fileId' + i] = fileId;
                 } catch (e) {
-                    imgEl.src = ''; imgEl.style.display = 'none'; phEl.innerText = '⚠️ 相片讀取失敗'; phEl.style.display = 'block'; delEl.style.display = 'none';
+                    imgEl.src = ''; imgEl.style.display = 'none'; 
+                    phEl.innerText = '⚠️ 相片讀取失敗'; phEl.style.display = 'block'; 
+                    delEl.style.display = 'none';
                 }
             } else {
-                imgEl.src = ''; imgEl.style.display = 'none'; phEl.innerText = '輕觸上傳相片 (區' + i + ')'; phEl.style.display = 'block'; delEl.style.display = 'none'; cloudImageData['fileId' + i] = '';
+                imgEl.src = ''; imgEl.style.display = 'none'; 
+                phEl.innerText = `輕觸上傳相片 (區${i})`; phEl.style.display = 'block'; 
+                delEl.style.display = 'none'; 
+                cloudImageData['fileId' + i] = '';
             }
         }
         hideLoading();
-    } catch (err) { hideLoading(); alert("❌ 載入失敗：" + err.message); }
+    } catch (err) { 
+        hideLoading(); 
+        alert("❌ 載入失敗：" + err.message); 
+    }
 }
 
 function clearForm() {
     if(confirm('⚠️ 確定要清除目前畫面上輸入的所有文字與照片嗎？(已存雲端的資料不受影響)')) {
-        document.getElementById('studentName').value = ''; document.getElementById('recordDate').value = ''; document.getElementById('teacherName').value = '';
-        for(let c=1; c<=6; c++) document.getElementById('cb'+c).checked = false;
+        const fields = ['studentName', 'recordDate', 'teacherName'];
+        fields.forEach(f => $(f).value = '');
+        for(let c=1; c<=6; c++) $('cb'+c).checked = false;
+        
         for(let i=1; i<=4; i++) {
-            document.getElementById('pd'+i).value = ''; document.getElementById('pdesc'+i).value = ''; document.getElementById('pab'+i).value = '';
-            document.getElementById('img'+i).src = ''; document.getElementById('img'+i).style.display = 'none';
-            document.getElementById('ph'+i).innerText = '輕觸上傳相片 (區' + i + ')'; document.getElementById('ph'+i).style.display = 'block';
-            document.getElementById('del'+i).style.display = 'none'; document.getElementById('file'+i).value = '';
+            $('pd'+i).value = ''; $('pdesc'+i).value = ''; $('pab'+i).value = '';
+            $('img'+i).src = ''; $('img'+i).style.display = 'none';
+            $('ph'+i).innerText = `輕觸上傳相片 (區${i})`; $('ph'+i).style.display = 'block';
+            $('del'+i).style.display = 'none'; $('file'+i).value = '';
             cloudImageData['fileId'+i] = '';
         }
     }
 }
 
-function showLoading(text) { document.getElementById('loaderText').innerHTML = text; document.getElementById('loader').style.display = 'flex'; }
-function hideLoading() { document.getElementById('loader').style.display = 'none'; }
+function showLoading(text) { $('loaderText').innerHTML = text; $('loader').style.display = 'flex'; }
+function hideLoading() { $('loader').style.display = 'none'; }
 
 // ==================== 說明視窗 ====================
-function showInfo() { document.getElementById('infoModal').style.display = 'flex'; }
-function closeInfo() { document.getElementById('infoModal').style.display = 'none'; }
+function showInfo() { $('infoModal').style.display = 'flex'; }
+function closeInfo() { $('infoModal').style.display = 'none'; }
 
 // ==================== 300 條重點能力詞庫資料 ====================
 const dictData = {
@@ -336,64 +403,67 @@ const dictData = {
 };
 
 function openDictModal() {
-    document.getElementById('dictModal').style.display = 'flex';
-    document.getElementById('dictView1').style.display = 'block';
-    document.getElementById('dictView2').style.display = 'none';
+    $('dictModal').style.display = 'flex';
+    $('dictView1').style.display = 'block';
+    $('dictView2').style.display = 'none';
 }
 
-function closeDictModal() { document.getElementById('dictModal').style.display = 'none'; }
-function backToDictHome() { document.getElementById('dictView2').style.display = 'none'; document.getElementById('dictView1').style.display = 'block'; }
+function closeDictModal() { $('dictModal').style.display = 'none'; }
+function backToDictHome() { 
+    $('dictView2').style.display = 'none'; 
+    $('dictView1').style.display = 'block'; 
+}
 
 function showCategoryDict(categoryName) {
-    document.getElementById('dictView1').style.display = 'none'; document.getElementById('dictView2').style.display = 'block';
-    document.getElementById('dictCategoryTitle').innerText = categoryName;
-    const container = document.getElementById('phraseListContainer');
-    container.innerHTML = '';
+    $('dictView1').style.display = 'none'; 
+    $('dictView2').style.display = 'block';
+    $('dictCategoryTitle').innerText = categoryName;
+    
+    const container = $('phraseListContainer');
+    container.innerHTML = ''; // 清空舊資料
+    
+    // 使用 DocumentFragment 減少 DOM 頻繁渲染
+    const fragment = document.createDocumentFragment();
     dictData[categoryName].forEach(phrase => {
         const item = document.createElement('div');
-        item.className = 'phrase-item'; item.innerText = phrase;
+        item.className = 'phrase-item'; 
+        item.innerText = phrase;
         item.onclick = () => copyPhraseToClipboard(phrase);
-        container.appendChild(item);
+        fragment.appendChild(item);
     });
+    container.appendChild(fragment);
 }
 
 function copyPhraseToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => { showToast(); });
+        navigator.clipboard.writeText(text).then(showToast);
     } else {
-        const textarea = document.createElement('textarea'); textarea.value = text;
-        document.body.appendChild(textarea); textarea.select(); document.execCommand('copy'); document.body.removeChild(textarea); showToast();
+        const textarea = document.createElement('textarea'); 
+        textarea.value = text;
+        document.body.appendChild(textarea); 
+        textarea.select(); 
+        document.execCommand('copy'); 
+        document.body.removeChild(textarea); 
+        showToast();
     }
 }
 
 function showToast() {
-    const toast = document.getElementById('copyToast'); toast.style.display = 'block';
+    const toast = $('copyToast'); 
+    toast.style.display = 'block';
     setTimeout(() => { toast.style.display = 'none'; }, 2000);
 }
 
 // ==================== 列印與 PDF 輸出檔名控制 ====================
 function printToPDF() {
-    // 記住網頁原本的標題
     const originalTitle = document.title;
+    const studentName = $('studentName').value.trim();
+    document.title = studentName ? studentName : "未命名幼生_學習區紀錄";
     
-    // 取得輸入框內的幼生姓名
-    const studentName = document.getElementById('studentName').value.trim();
-    
-    // 如果有姓名就用姓名作為 PDF 檔名，否則使用預設名稱
-    if (studentName) {
-        document.title = studentName;
-    } else {
-        document.title = "未命名幼生_學習區紀錄";
-    }
-    
-    // 稍微延遲 100 毫秒，讓瀏覽器有充裕的時間去更新網頁標題，再觸發列印
     setTimeout(() => {
         window.print();
-        
-        // 將還原標題的時間拉長到 2 秒，避免列印視窗還沒抓完檔名就被改回來
         setTimeout(() => {
             document.title = originalTitle;
         }, 2000);
-        
     }, 100);
 }
