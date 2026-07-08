@@ -1,5 +1,5 @@
-// 版本號升級至 v12，強制讓瀏覽器拋棄舊快取，同步載入自動登入功能
-const CACHE_NAME = 'learn-record-v12';
+// 版本號升級至 v13，強制讓瀏覽器拋棄舊快取，同步載入自動登入與 PDF 檔名修復功能
+const CACHE_NAME = 'learn-record-v13';
 const urlsToCache = [
   './',
   './index.html',

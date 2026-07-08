@@ -35,7 +35,7 @@ window.addEventListener('load', () => {
             },
         });
 
-        // ===== 核心修改：網頁載入時，自動觸發 Google 帳號登入與授權 =====
+        // 網頁載入時，自動觸發 Google 帳號登入與授權
         tokenClient.requestAccessToken();
     }
 
@@ -386,11 +386,14 @@ function printToPDF() {
         document.title = "未命名幼生_學習區紀錄";
     }
     
-    // 觸發瀏覽器列印 (另存成 PDF)
-    window.print();
-    
-    // 延遲 1 秒鐘後還原網頁原本的標題
+    // 稍微延遲 100 毫秒，讓瀏覽器有充裕的時間去更新網頁標題，再觸發列印
     setTimeout(() => {
-        document.title = originalTitle;
-    }, 1000);
+        window.print();
+        
+        // 將還原標題的時間拉長到 2 秒，避免列印視窗還沒抓完檔名就被改回來
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 2000);
+        
+    }, 100);
 }
