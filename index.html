@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>幼兒學習區紀錄 (獨立 PWA 版)</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="學習區紀錄">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+    /* ==================================================== */
+    /* 1. 電腦版與預設版面 (A4 完美比例)                    */
+    /* ==================================================== */
+    body { background-color: #e8eaed; font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; padding-top: 60px; display: flex; justify-content: center; }
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; background-color: #1a73e8; color: white; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    .top-bar-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; }
+    .seat-input { padding: 4px; font-size: 14px; border-radius: 4px; border: none; width: 50px; text-align: center; font-weight: bold; background: #fff; }
+    .btn { padding: 6px 12px; font-size: 13px; cursor: pointer; color: white; border: none; border-radius: 4px; font-weight: bold; font-family: "Microsoft JhengHei", sans-serif; }
+    .btn:active { transform: scale(0.95); }
+    .btn-auth { background-color: #4285F4; }
+    .btn-save { background-color: #34a853; }
+    .btn-load { background-color: #fbbc05; color: #000; }
+    .btn-print { background-color: #ea4335; }
+    .btn-clear { background-color: #9b59b6; }
+    .btn-info { background-color: #00bcd4; }
+    .btn-dict { background-color: #ff9800; } 
+
+    .a4-page { width: 210mm; height: 297mm; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.3); padding: 10mm 15mm 10mm 15mm; box-sizing: border-box; position: relative; margin-bottom: 30px; overflow: hidden; }
+    
+    h1 { text-align: center; font-size: 19px; margin: 0 0 8px 0; font-weight: bold; letter-spacing: 0.5px; }
+    .title-input { font-size: 19px; font-family: inherit; border: none; text-align: center; outline: none; font-weight: bold; background: rgba(0,0,0,0.04); border-radius: 4px; }
+    .title-input.year { width: 50px; } .title-input.term { width: 30px; }
+    
+    .header-info { display: flex; justify-content: space-between; align-items: center; font-size: 16px; margin-bottom: 10px; width: 100%; }
+    .header-col { display: flex; align-items: center; white-space: nowrap; }
+    .header-col input, .header-col select { font-size: 16px; font-family: inherit; border: none; outline: none; background: rgba(0,0,0,0.05); border-radius: 4px; padding: 4px 6px; margin-left: 6px; text-align: center; color: #000; }
+    .class-col select { width: 75px; } .name-col input { width: 100px; } .seat-col input { width: 45px; } .date-col input { width: 150px; text-align: left; padding-left: 8px;} 
+
+    .table-wrapper { width: 100%; }
+    table.main-table { width: 100%; border-collapse: collapse; border: 1px solid #000; table-layout: fixed; }
+    table.main-table td { border: 1px solid #000; padding: 0; vertical-align: top; } 
+    
+    .checkbox-cell { padding: 4px 10px !important; text-align: left; font-size: 16px; vertical-align: middle !important; height: 38px; }
+    .checkbox-cell input[type="checkbox"] { transform: scale(1.2); margin-right: 4px; vertical-align: middle; cursor: pointer; }
+    .checkbox-icon { font-size: 16px; margin-right: 3px; vertical-align: middle; }
+
+    .photo-cell { display: flex; flex-direction: column; height: 410px; box-sizing: border-box; position: relative; }
+    .photo-area { height: 250px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #000; cursor: pointer; overflow: hidden; position: relative; background-color: #f9f9f9; -webkit-tap-highlight-color: transparent; }
+    .photo-area:active { background-color: #e0e0e0; }
+    .photo-area img { width: 100%; height: 100%; object-fit: contain; display: none; }
+    .photo-placeholder { color: #888; font-size: 12px; text-align: center; padding: 2px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; pointer-events: none; }
+    .delete-btn { position: absolute; top: 4px; right: 4px; background-color: rgba(244, 67, 54, 0.85); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; line-height: 22px; text-align: center; cursor: pointer; z-index: 10; display: none; }
+    
+    .text-area { padding: 6px 8px; font-size: 15px; display: flex; flex-direction: column; justify-content: space-between; height: 160px; box-sizing: border-box; }
+    .tf-row { display: flex; align-items: center; width: 100%; }
+    .tf-row input { flex-grow: 1; font-size: 15px; font-family: inherit; border: none; outline: none; background: rgba(0,0,0,0.04); border-radius: 4px; padding: 2px 6px; min-height: 24px; }
+    .top-line { border-top: 1px solid #000; padding-top: 6px; margin-top: 4px; }
+    .text-label { font-weight: normal; flex-shrink: 0; font-size: 15px; }
+    
+    .footer-container { display: flex; justify-content: space-between; align-items: center; font-size: 15px; padding: 8px 4px 0 4px; }
+    .footer-container input { font-size: 15px; font-family: inherit; border: none; outline: none; width: 100px; text-align: center; background: rgba(0,0,0,0.04); border-radius: 4px; padding: 2px 4px;}
+    .footer-note { font-weight: bold; font-size: 14px; }
+
+    .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 3000; justify-content: center; align-items: center; flex-direction: column; color: white; font-family: "Microsoft JhengHei", sans-serif; font-size: 16px; text-align: center;}
+    .spinner { border: 5px solid #f3f3f3; border-top: 5px solid #34a853; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* ==================================================== */
+    /* 2. 手機螢幕友善介面                                    */
+    /* ==================================================== */
+    @media screen and (max-width: 800px) {
+        body { padding-top: 110px; background-color: #f0f2f5; }
+        .a4-page { width: 100%; height: auto; box-shadow: none; padding: 15px; margin-bottom: 0; border-radius: 0; margin-top: 10px; }
+        h1 { font-size: 20px; line-height: 1.5; margin-bottom: 15px; }
+        .title-input { background: #fff; border: 1px solid #ccc !important; }
+        .header-info { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 15px; }
+        .header-col { display: flex; flex-direction: row; align-items: center; }
+        .class-col { width: calc(40% - 6px); } .name-col { width: calc(60% - 6px); } .seat-col { width: calc(32% - 6px); } .date-col { width: calc(68% - 6px); }
+        .header-col input, .header-col select { flex-grow: 1; width: 100%; height: 42px; border: 1px solid #ccc !important; background: #fff; text-align: left; padding: 0 10px; font-size: 16px;}
+        table.main-table, table.main-table tbody { display: block; width: 100%; border: none; }
+        table.main-table tr { display: flex; flex-wrap: wrap; width: 100%; border: none; }
+        table.main-table td { display: block; border: none; }
+        .checkbox-cell { width: 50%; height: 50px; display: flex; align-items: center; justify-content: flex-start; padding-left: 15px !important; border-bottom: 1px solid #eee; background: #fff;}
+        .checkbox-cell input[type="checkbox"] { transform: scale(1.5); margin-right: 10px; }
+        td[colspan="3"] { width: 100%; margin-top: 20px; border: 2px solid #1a73e8 !important; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #fff; }
+        .photo-cell { height: auto; }
+        .photo-area { height: 280px; background-color: #f8f9fa; border-bottom: 2px solid #1a73e8; }
+        .text-area { height: auto; padding: 15px; gap: 12px; }
+        .tf-row { flex-direction: column; align-items: flex-start; width: 100%; }
+        .tf-row.inline-mobile { flex-direction: row; align-items: center; } 
+        .tf-row.inline-mobile input[type="text"] { width: auto; flex-grow: 1; margin-left: 10px; margin-top: 0; }
+        .text-label { font-size: 15px; color: #1a73e8; font-weight: bold; margin-bottom: 4px; }
+        .tf-row input[type="text"] { border: 1px solid #ccc !important; height: 45px; font-size: 16px !important; border-radius: 6px; padding: 0 12px !important; background: #fff; width: 100%; box-sizing: border-box; margin-top: 4px; }
+        .top-line { border: none; padding: 0; margin-top: 10px; }
+        .footer-container { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: center; padding-top: 25px; gap: 15px; }
+        .footer-container div { width: 100%; display: flex; flex-direction: row; align-items: center; }
+        .footer-container input { flex-grow: 1; height: 45px; font-size: 16px; border: 1px solid #ccc !important; border-radius: 6px; text-align: left; padding: 0 12px; margin-left: 10px; background: #fff;}
+    }
+
+    /* ==================================================== */
+    /* 3. 列印與 PDF 輸出專用                                 */
+    /* ==================================================== */
+    @media print {
+        @page { margin: 0; size: A4 portrait; }
+        body { background-color: white; padding: 0; margin: 0; display: block; }
+        .top-bar, .delete-btn { display: none !important; }
+        .table-wrapper { overflow-x: visible; }
+        .a4-page { box-shadow: none !important; margin: 0 auto !important; padding: 10mm 15mm 10mm 15mm !important; width: 210mm !important; height: 296mm !important; overflow: hidden !important; page-break-after: always !important; display: block !important; border-radius: 0 !important; }
+        .header-info { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; width: 100% !important; margin-bottom: 6px !important;}
+        .header-col { width: auto !important; display: flex !important; flex-direction: row !important; align-items: center !important; }
+        .header-col input, .header-col select { margin-left: 4px !important; margin-top: 0 !important; font-size: 16px !important; height: auto !important; border: none !important; border-radius: 0 !important; padding: 0 !important; text-align: center !important; background: transparent !important; }
+        .class-col select { width: 75px !important; } .name-col input { width: 100px !important; } .seat-col input { width: 45px !important; } .date-col input { width: 150px !important; text-align: left !important; }
+        .title-input { background: transparent !important; border: none !important; }
+        table.main-table { display: table !important; width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; }
+        table.main-table tbody { display: table-row-group !important; }
+        table.main-table tr { display: table-row !important; flex-wrap: nowrap !important; width: auto !important; }
+        table.main-table td { display: table-cell !important; border: 1px solid #000 !important; }
+        .checkbox-cell { width: auto !important; height: 38px !important; display: table-cell !important; padding: 4px 10px !important; }
+        .checkbox-cell input[type="checkbox"] { transform: scale(1.2) !important; }
+        td[colspan="3"] { display: table-cell !important; width: 50% !important; margin-top: 0 !important; border: 1px solid #000 !important; border-radius: 0 !important; box-shadow: none !important; }
+        .photo-cell { height: 410px !important; }
+        .photo-area { height: 250px !important; background-color: transparent !important; border-bottom: 1px solid #000 !important; }
+        .text-area { height: 160px !important; padding: 6px 8px !important; background-color: transparent !important; gap: 0 !important; }
+        .tf-row { flex-direction: row !important; align-items: center !important; }
+        .text-label { font-size: 15px !important; color: #000 !important; font-weight: normal !important; margin-bottom: 0 !important; }
+        .tf-row input[type="text"] { border: none !important; height: auto !important; font-size: 15px !important; border-radius: 0 !important; margin-top: 0 !important; padding: 0 6px !important; background: transparent !important; }
+        .top-line { border-top: 1px solid #000 !important; padding-top: 6px !important; margin-top: 4px !important; }
+        .footer-container { display: flex !important; flex-direction: row !important; align-items: center !important; padding-top: 8px !important; gap: 0 !important;}
+        .footer-container div { width: auto !important; display: block !important; }
+        .footer-container input { width: 100px !important; height: auto !important; font-size: 15px !important; border: none !important; text-align: center !important; padding: 0 !important; margin-top: 0 !important; margin-left:0 !important; background: transparent !important; }
+        .header-info select { appearance: none; -webkit-appearance: none; }
+        .photo-placeholder { display: none !important; }
+    }
+
+    /* ==================================================== */
+    /* 4. 彈出視窗共用樣式 (說明與詞庫)                        */
+    /* ==================================================== */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 4000; display: none; justify-content: center; align-items: center; padding: 20px; }
+    .modal-content { background: #fff; width: 100%; max-width: 600px; border-radius: 8px; padding: 25px; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-family: "Microsoft JhengHei", sans-serif; }
+    .modal-close { position: absolute; top: 15px; right: 15px; cursor: pointer; font-size: 24px; border: none; background: transparent; color: #888; }
+    .modal-title { font-size: 21px; font-weight: bold; margin-top: 0; margin-bottom: 15px; color: #1a73e8; border-bottom: 2px solid #eee; padding-bottom: 10px; text-align: left; }
+    .modal-section { margin-bottom: 20px; font-size: 15px; line-height: 1.6; text-align: left; }
+    .modal-section h3 { font-size: 17px; margin: 0 0 8px 0; color: #333; display: flex; align-items: center; font-weight: bold; }
+    .modal-section ul { margin: 0; padding-left: 22px; color: #555; }
+    .modal-section li { margin-bottom: 6px; }
+    .version-tag { display: inline-block; background: #e8eaed; padding: 3px 10px; border-radius: 12px; font-size: 13px; color: #555; margin-left: 10px; vertical-align: middle; font-weight: normal; }
+    .highlight { color: #ea4335; font-weight: bold; }
+    .dict-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
+    @media screen and (max-width: 500px) { .dict-grid { grid-template-columns: 1fr; } }
+    .dict-grid button { padding: 15px; font-size: 18px; border: 2px solid #1a73e8; border-radius: 8px; background: #fff; color: #1a73e8; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    .dict-grid button:hover { background: #1a73e8; color: #fff; }
+    .phrase-list { display: flex; flex-direction: column; gap: 8px; text-align: left; padding-right: 5px; }
+    .phrase-item { background: #f8f9fa; border: 1px solid #ddd; padding: 12px 15px; border-radius: 6px; cursor: pointer; font-size: 16px; transition: all 0.2s; position: relative; }
+    .phrase-item:hover { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; padding-left: 20px; }
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 30px; z-index: 5000; font-size: 16px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div class="toast" id="copyToast">✅ 已成功複製重點能力！</div>
+
+<div class="loader-overlay" id="loader">
+    <div class="spinner"></div>
+    <div id="loaderText">處理中...</div>
+</div>
+
+<div class="top-bar no-print">
+    <div class="top-bar-row">
+        <button id="loginBtn" class="btn btn-auth" onclick="handleAuthClick()">🔵 Google 帳號登入</button>
+        <span style="font-weight: bold; font-family: 'Microsoft JhengHei'; margin-left: 10px;">目前座號:</span>
+        <input type="number" id="ctrlSeat" class="seat-input" value="1" min="1" max="99">
+        <button class="btn btn-load" onclick="cloudLoad()">📥 載入</button>
+        <button class="btn btn-save" onclick="cloudSave()">☁️ 存檔</button>
+        <button class="btn btn-clear" onclick="clearForm()">🧹 清除</button>
+        <button class="btn btn-print" onclick="printToPDF()">🖨️ 轉PDF</button>
+        <button class="btn btn-dict" onclick="openDictModal()">💡 重點能力</button>
+        <button class="btn btn-info" onclick="showInfo()">📖 說明</button>
+    </div>
+</div>
+
+<div class="a4-page" id="recordForm">
+    <h1>遠東幼兒園 <input type="text" class="title-input year" id="year" placeholder=" "> 學年度 第 <input type="text" class="title-input term" id="term" placeholder=" "> 學期 幼兒學習區紀錄</h1>
+    
+    <div class="header-info">
+        <div class="header-col class-col">班級: <select id="className"><option value="大班">大班</option><option value="中班">中班</option><option value="小班" selected>小班</option></select></div>
+        <div class="header-col name-col">幼生姓名: <input type="text" class="name" id="studentName"></div>
+        <div class="header-col seat-col">座號: <input type="text" class="seat" id="seatNumber" readonly></div>
+        <div class="header-col date-col">紀錄日期: <input type="text" class="date" id="recordDate" placeholder=" "></div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="main-table">
+            <tr>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">✂️</span><input type="checkbox" id="cb1"> 美勞區</td>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">📚</span><input type="checkbox" id="cb2"> 語文區</td>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">🧱</span><input type="checkbox" id="cb3"> 積木區</td>
+            </tr>
+            <tr>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">🧩</span><input type="checkbox" id="cb4"> 益智區</td>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">👟</span><input type="checkbox" id="cb5"> 生活自理區</td>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">🏗️</span><input type="checkbox" id="cb6"> 組合建構區</td>
+            </tr>
+            
+            <tr>
+                <td colspan="3" style="padding: 0;">
+                    <div class="photo-cell">
+                        <label for="file1" class="photo-area"><img id="img1"><div class="photo-placeholder" id="ph1">輕觸上傳相片 (區1)</div></label>
+                        <button class="delete-btn no-print" id="del1" onclick="removeImage(1, event)" title="刪除">✖</button>
+                        <input type="file" id="file1" style="display:none;" accept="image/*" onchange="processImage(event, 1)">
+                        <div class="text-area">
+                            <div class="tf-row inline-mobile"><span class="text-label">▶紀錄日期：</span><input type="text" id="pd1"></div>
+                            <div class="tf-row"><span class="text-label">▶照片說明：</span></div>
+                            <div class="tf-row"><input type="text" id="pdesc1"></div>
+                            <div class="tf-row top-line"><span class="text-label">★重點能力：</span></div>
+                            <div class="tf-row"><input type="text" id="pab1"></div>
+                        </div>
+                    </div>
+                </td>
+                <td colspan="3" style="padding: 0;">
+                    <div class="photo-cell">
+                        <label for="file2" class="photo-area"><img id="img2"><div class="photo-placeholder" id="ph2">輕觸上傳相片 (區2)</div></label>
+                        <button class="delete-btn no-print" id="del2" onclick="removeImage(2, event)" title="刪除">✖</button>
+                        <input type="file" id="file2" style="display:none;" accept="image/*" onchange="processImage(event, 2)">
+                        <div class="text-area">
+                            <div class="tf-row inline-mobile"><span class="text-label">▶紀錄日期：</span><input type="text" id="pd2"></div>
+                            <div class="tf-row"><span class="text-label">▶照片說明：</span></div>
+                            <div class="tf-row"><input type="text" id="pdesc2"></div>
+                            <div class="tf-row top-line"><span class="text-label">★重點能力：</span></div>
+                            <div class="tf-row"><input type="text" id="pab2"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+     
+            <tr>
+                <td colspan="3" style="padding: 0;">
+                    <div class="photo-cell">
+                        <label for="file3" class="photo-area"><img id="img3"><div class="photo-placeholder" id="ph3">輕觸上傳相片 (區3)</div></label>
+                        <button class="delete-btn no-print" id="del3" onclick="removeImage(3, event)" title="刪除">✖</button>
+                        <input type="file" id="file3" style="display:none;" accept="image/*" onchange="processImage(event, 3)">
+                        <div class="text-area">
+                            <div class="tf-row inline-mobile"><span class="text-label">▶紀錄日期：</span><input type="text" id="pd3"></div>
+                            <div class="tf-row"><span class="text-label">▶照片說明：</span></div>
+                            <div class="tf-row"><input type="text" id="pdesc3"></div>
+                            <div class="tf-row top-line"><span class="text-label">★重點能力：</span></div>
+                            <div class="tf-row"><input type="text" id="pab3"></div>
+                        </div>
+                    </div>
+                </td>
+                <td colspan="3" style="padding: 0;">
+                    <div class="photo-cell">
+                        <label for="file4" class="photo-area"><img id="img4"><div class="photo-placeholder" id="ph4">輕觸上傳相片 (區4)</div></label>
+                        <button class="delete-btn no-print" id="del4" onclick="removeImage(4, event)" title="刪除">✖</button>
+                        <input type="file" id="file4" style="display:none;" accept="image/*" onchange="processImage(event, 4)">
+                        <div class="text-area">
+                            <div class="tf-row inline-mobile"><span class="text-label">▶紀錄日期：</span><input type="text" id="pd4"></div>
+                            <div class="tf-row"><span class="text-label">▶照片說明：</span></div>
+                            <div class="tf-row"><input type="text" id="pdesc4"></div>
+                            <div class="tf-row top-line"><span class="text-label">★重點能力：</span></div>
+                            <div class="tf-row"><input type="text" id="pab4"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        
+        <div class="footer-container">
+            <div>班級導師: <input type="text" id="teacherName"></div>
+            <div class="footer-note">《請於隔週一交回存檔，期末發回，謝謝！》</div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeInfo()">✖</button>
+        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：發行版</span></h2>
+        
+        <div class="modal-section">
+            <h3>⚠️ Google 第一次登入常見問題處理</h3>
+            <ul>
+                <li><strong>彈出視窗遭到封鎖：</strong>第一次點擊登入時，瀏覽器可能會阻擋 Google 登入驗證視窗。請注意網址列右側，設定「永遠允許」本網站顯示彈出式視窗。</li>
+                <li><strong>出現「Google 尚未驗證這個應用程式」：</strong>因本系統為內部專屬私有工具，尚未提交 Google 官方公開發布審核。若出現此安全警告，請點擊左下角微小的<strong>「進階」</strong>連結 ➜ 再點擊<strong>「前往該網站 (不安全)」</strong>即可繼續授權。</li>
+                <li><strong>權限未完整勾選：</strong>驗證授權時，請務必勾選「Google 雲端硬碟 (Drive)」及「Google 試算表 (Sheets)」的存取與權限，否則系統將無法為您順利建立資料庫、存檔或讀取相片。</li>
+            </ul>
+        </div>
+        <div class="modal-section">
+            <h3>📱 如何安裝至手機桌面 (免下載APP)</h3>
+            <ul>
+                <li><strong>蘋果 iOS (Safari)：</strong>點擊瀏覽器下方導覽列的「分享」圖示，選擇「加入主畫面」。</li>
+                <li><strong>安卓 Android (Chrome)：</strong>點擊右上角「三個點」選單，選擇「安裝應用程式」。</li>
+            </ul>
+        </div>
+        <div class="modal-section">
+            <h3>📝 基本操作與重點能力</h3>
+            <ul>
+                <li><strong>載入與儲存：</strong>輸入座號後點擊「📥 載入」可讀取舊資料，完成編輯後點擊「☁️ 存檔」即可同步至雲端。</li>
+                <li><strong>重點能力詞庫：</strong>點擊「💡 重點能力」按鈕，可快速瀏覽各區專屬評語，點擊句子即可自動複製。</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="dictModal" onclick="closeDictModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div id="dictView1">
+            <button class="modal-close" onclick="closeDictModal()">✖</button>
+            <h2 class="modal-title">💡 挑選重點能力區塊</h2>
+            <p style="color: #666; font-size: 15px; margin-bottom: 0;">請點擊下方區塊，查看專屬的評語詞庫：</p>
+            <div class="dict-grid">
+                <button onclick="showCategoryDict('美勞區')">✂️ 美勞區</button>
+                <button onclick="showCategoryDict('語文區')">📚 語文區</button>
+                <button onclick="showCategoryDict('積木區')">🧱 積木區</button>
+                <button onclick="showCategoryDict('益智區')">🧩 益智區</button>
+                <button onclick="showCategoryDict('生活自理區')">👟 生活自理區</button>
+                <button onclick="showCategoryDict('組合建構區')">🏗️ 組合建構區</button>
+            </div>
+        </div>
+        <div id="dictView2" style="display: none;">
+            <button class="modal-close" onclick="closeDictModal()">✖</button>
+            <h2 class="modal-title" style="display: flex; align-items: center;">
+                <button onclick="backToDictHome()" style="margin-right: 15px; font-size: 15px; cursor: pointer; border: 1px solid #ccc; padding: 4px 10px; border-radius: 4px; background: #f0f0f0;">⬅ 返回</button>
+                <span id="dictCategoryTitle">美勞區</span>
+            </h2>
+            <p style="color: #ea4335; font-size: 14px; margin-bottom: 15px; font-weight: bold;">※ 點擊下方句子即可自動複製，並可直接貼上至表格中！</p>
+            <div class="phrase-list" id="phraseListContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script src="app.js" defer></script>
+</body>
+</html>
