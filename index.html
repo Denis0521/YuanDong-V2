@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>幼兒學習區紀錄</title>
+<title>幼兒學習區紀錄 (獨立 PWA 版)</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,25 +15,39 @@
     /* ==================================================== */
     /* 1. 電腦版與預設版面 (A4 完美比例)                    */
     /* ==================================================== */
-    body { background-color: #e8eaed; font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; padding-top: 75px; display: flex; justify-content: center; }
+    body { background-color: #e8eaed; font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; padding-top: 160px; display: flex; justify-content: center; }
     
-    /* 調整 Top Bar 視覺，使用漸層底色襯托玻璃珠 */
-    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: white; padding: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-    .top-bar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1200px; }
+    /* 頂部選單背景 */
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: white; padding: 12px; display: flex; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     
+    /* === 網格排版 (Grid)：3排設計 === */
+    .top-bar-row { 
+        display: grid;
+        grid-template-columns: repeat(6, 1fr); /* 切成 6 等份以利分配 */
+        gap: 8px; /* 按鈕之間的間距 */
+        width: 100%;
+        max-width: 700px; /* 控制台整體最大寬度 */
+        margin: 0 auto;
+    }
+    
+    /* 佔一半 (span 3 / 6) */
+    .btn-half { grid-column: span 3; }
+    /* 佔三分之一 (span 2 / 6) */
+    .btn-third { grid-column: span 2; }
+
     /* === 座號輸入框：玻璃珠風格 === */
     .seat-control {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 140px;
-        height: 42px;
+        width: 100%; /* 寬度由 Grid 控制 */
+        height: 34px; /* 高度調降 */
         background-color: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px rgba(0,0,0,0.15), inset 0 10px 20px rgba(255,255,255,0.25);
-        border-radius: 30px; /* 橢圓 */
+        border-radius: 20px; /* 橢圓圓角 */
         color: #fff;
         text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
         font-weight: bold;
@@ -41,14 +55,14 @@
         font-size: 14px;
         box-sizing: border-box;
     }
-    .seat-input { padding: 4px; font-size: 14px; border-radius: 12px; border: none; width: 45px; text-align: center; font-weight: bold; background: rgba(255,255,255,0.9); color: #333; margin-left: 6px; outline: none; }
+    .seat-input { padding: 2px 4px; font-size: 14px; border-radius: 12px; border: none; width: 45px; text-align: center; font-weight: bold; background: rgba(255,255,255,0.9); color: #333; margin-left: 6px; outline: none; }
     
     /* === 統一按鈕設計：相同大小、橢圓形透明玻璃珠 === */
     .btn { 
-        width: 125px; /* 統一按鈕寬度 */
-        height: 42px; /* 統一按鈕高度 */
-        padding: 0;
-        border-radius: 30px; /* 橢圓形 */
+        width: 100%; /* 寬度由 Grid 控制 */
+        height: 34px; /* 高度調降 */
+        padding: 0 4px;
+        border-radius: 20px; /* 橢圓圓角 */
         background-color: rgba(255, 255, 255, 0.15); /* 透明玻璃底色 */
         backdrop-filter: blur(8px); /* 毛玻璃模糊 */
         -webkit-backdrop-filter: blur(8px);
@@ -82,7 +96,14 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 5px 10px rgba(255,255,255,0.1);
     }
     
-    /* 玻璃珠個別透色 (保留功能識別，但不蓋過透明感) */
+    /* 手機極窄螢幕防止文字擠壓 */
+    @media screen and (max-width: 400px) {
+        .btn { font-size: 13px; letter-spacing: -0.5px; }
+        .seat-control { font-size: 13px; letter-spacing: -0.5px; }
+        .seat-input { width: 35px; }
+    }
+    
+    /* 玻璃珠個別透色 */
     .btn-auth { background-color: rgba(66, 133, 244, 0.25); border-color: rgba(66, 133, 244, 0.6); }
     .btn-save { background-color: rgba(52, 168, 83, 0.25); border-color: rgba(52, 168, 83, 0.6); }
     .btn-load { background-color: rgba(251, 188, 5, 0.25); border-color: rgba(251, 188, 5, 0.6); }
@@ -135,7 +156,7 @@
     /* 2. 手機螢幕友善介面                                    */
     /* ==================================================== */
     @media screen and (max-width: 800px) {
-        body { padding-top: 170px; background-color: #f0f2f5; }
+        body { padding-top: 160px; background-color: #f0f2f5; }
         .a4-page { width: 100%; height: auto; box-shadow: none; padding: 15px; margin-bottom: 0; border-radius: 0; margin-top: 10px; }
         h1 { font-size: 20px; line-height: 1.5; margin-bottom: 15px; }
         .title-input { background: #fff; border: 1px solid #ccc !important; }
@@ -231,17 +252,19 @@
 
 <div class="top-bar no-print">
     <div class="top-bar-row">
-        <button id="loginBtn" class="btn btn-auth" onclick="handleAuthClick()">🔵 Google 登入</button>
-        <div class="seat-control">
+        <button id="loginBtn" class="btn btn-auth btn-half" onclick="handleAuthClick()">🔵 Google 登入</button>
+        <div class="seat-control btn-half">
             <span style="margin-right: 4px;">目前座號:</span>
             <input type="number" id="ctrlSeat" class="seat-input" value="1" min="1" max="99">
         </div>
-        <button class="btn btn-load" onclick="cloudLoad()">📥 載入資料</button>
-        <button class="btn btn-save" onclick="cloudSave()">☁️ 存檔至雲</button>
-        <button class="btn btn-clear" onclick="clearForm()">🧹 清除畫面</button>
-        <button class="btn btn-print" onclick="printToPDF()">🖨️ 轉存 PDF</button>
-        <button class="btn btn-dict" onclick="openDictModal()">💡 重點能力</button>
-        <button class="btn btn-info" onclick="showInfo()">📖 操作說明</button>
+        
+        <button class="btn btn-load btn-third" onclick="cloudLoad()">📥 載入資料</button>
+        <button class="btn btn-save btn-third" onclick="cloudSave()">☁️ 存檔至雲</button>
+        <button class="btn btn-clear btn-third" onclick="clearForm()">🧹 清除畫面</button>
+        
+        <button class="btn btn-print btn-third" onclick="printToPDF()">🖨️ 轉存 PDF</button>
+        <button class="btn btn-dict btn-third" onclick="openDictModal()">💡 重點能力</button>
+        <button class="btn btn-info btn-third" onclick="showInfo()">📖 操作說明</button>
     </div>
 </div>
 
