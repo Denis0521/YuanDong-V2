@@ -10,24 +10,20 @@ let spreadsheetId = null;
 let folderId = null;
 const cloudImageData = { fileId1: '', fileId2: '', fileId3: '', fileId4: '' };
 
-// 輔助函式：縮寫 document.getElementById
 const $ = (id) => document.getElementById(id);
 
 window.addEventListener('load', () => {
-    // 註冊 Service Worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')
             .then(() => console.log('Service Worker 註冊成功'))
             .catch(err => console.error('Service Worker 註冊失敗', err));
     }
     
-    // 1. 檢查瀏覽器是否還記著未過期的通行證 (1小時內)
     const savedToken = localStorage.getItem('g_token');
     const expireTime = localStorage.getItem('g_expire');
     const now = new Date().getTime();
 
     if (savedToken && expireTime && now < parseInt(expireTime)) {
-        // 通行證還有效！直接無縫登入
         accessToken = savedToken;
         const loginBtn = $('loginBtn');
         loginBtn.innerText = '🟢 自動連線中';
@@ -38,7 +34,6 @@ window.addEventListener('load', () => {
             loginBtn.innerText = '🟢 已連線雲端';
         });
     } else {
-        // 通行證過期了，清除舊記憶，等待使用者點擊按鈕
         localStorage.removeItem('g_token');
         localStorage.removeItem('g_expire');
     }
@@ -47,7 +42,7 @@ window.addEventListener('load', () => {
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
-            prompt: '', // 減少重複授權彈跳視窗的機率
+            prompt: '', 
             callback: async (tokenResponse) => {
                 if (tokenResponse.error) {
                     alert('❌ Google 授權失敗：' + tokenResponse.error);
@@ -55,7 +50,6 @@ window.addEventListener('load', () => {
                 }
                 accessToken = tokenResponse.access_token;
                 
-                // 2. 登入成功後，把通行證存進手機/瀏覽器裡 (設定提早 1 分鐘過期以策安全)
                 const expiresIn = tokenResponse.expires_in || 3599;
                 const newExpireTime = new Date().getTime() + (expiresIn - 60) * 1000;
                 localStorage.setItem('g_token', accessToken);
@@ -71,10 +65,24 @@ window.addEventListener('load', () => {
         });
     }
 
-    // 綁定座號連動
     $('seatNumber').value = $('ctrlSeat').value;
     $('ctrlSeat').addEventListener('change', function() {
         $('seatNumber').value = this.value;
+    });
+
+    // 【重要修復 1】防鍵盤遮擋：當任何輸入框被點擊時，自動把它滑到畫面中間
+    document.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
+        input.addEventListener('focus', function() {
+            setTimeout(() => {
+                this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300); // 稍微等 0.3 秒讓鍵盤完全彈出來
+        });
+    });
+
+    // 【重要修復 2】即時標題綁定：只要打字，網頁檔名就跟著換，確保列印 100% 抓到名字
+    $('studentName').addEventListener('input', function() {
+        const name = this.value.trim();
+        document.title = name ? `${name}_學習區紀錄` : '未命名幼生_學習區紀錄';
     });
 });
 
@@ -99,7 +107,6 @@ async function fetchGoogleAPI(url, options = {}) {
     
     const response = await fetch(url, options);
     if (!response.ok) {
-        // 3. 如果 API 報錯說沒有權限 (401)，代表通行證失效，強制登出
         if (response.status === 401) {
             localStorage.removeItem('g_token');
             localStorage.removeItem('g_expire');
@@ -109,7 +116,6 @@ async function fetchGoogleAPI(url, options = {}) {
             loginBtn.style.backgroundColor = 'rgba(66, 133, 244, 0.25)';
             alert('⚠️ 您的 Google 登入憑證已過期，請重新點擊上方「Google 登入」按鈕！');
         }
-        
         const errDetails = await response.text();
         console.error('API Error:', errDetails);
         throw new Error(`狀態碼: ${response.status}`);
@@ -122,13 +128,11 @@ async function initEnvironment() {
         const qSheet = "name='幼兒學習區紀錄資料庫' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false";
         const qFolder = "name='幼兒相片雲端備份庫' and mimeType='application/vnd.google-apps.folder' and trashed=false";
         
-        // 平行處理：同時搜尋/建立試算表與資料夾
         const [sheetSearch, folderSearch] = await Promise.all([
             fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(qSheet)}`),
             fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(qFolder)}`)
         ]);
         
-        // 處理試算表
         if (sheetSearch.files?.length > 0) {
             spreadsheetId = sheetSearch.files[0].id;
         } else {
@@ -145,7 +149,6 @@ async function initEnvironment() {
             });
         }
 
-        // 處理資料夾
         if (folderSearch.files?.length > 0) {
             folderId = folderSearch.files[0].id;
         } else {
@@ -163,7 +166,6 @@ async function initEnvironment() {
     }
 }
 
-// 將圖片載入封裝為 Promise
 const readImageFile = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => resolve(e.target.result);
@@ -218,7 +220,6 @@ async function processImage(event, index) {
         $('ph' + index).style.display = 'none';
         $('del' + index).style.display = 'block';
         
-        // 清理記憶體
         canvas.width = 0; canvas.height = 0;
 
         const response = await fetch(dataUrl);
@@ -313,7 +314,6 @@ async function cloudSave() {
         const readRes = await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E`);
         const values = readRes.values || [];
         
-        // 尋找目標座號的索引位置
         const rowIndex = values.findIndex((row, idx) => idx > 0 && row[0] == data.seatNumber);
         const actualRow = rowIndex > -1 ? rowIndex + 1 : -1;
         
@@ -361,7 +361,6 @@ async function cloudLoad() {
         
         const targetData = JSON.parse(targetRow[4]);
         
-        // 批次復原文字與勾選狀態
         const fields = ['year', 'term', 'className', 'teacherName', 'studentName', 'recordDate'];
         fields.forEach(f => { if(targetData[f] !== undefined) $(f).value = targetData[f]; });
         for(let c=1; c<=6; c++) $('cb'+c).checked = targetData['cb'+c] || false;
@@ -400,6 +399,11 @@ async function cloudLoad() {
                 cloudImageData['fileId' + i] = '';
             }
         }
+        
+        // 載入完畢後也更新一次標題
+        const name = $('studentName').value.trim();
+        document.title = name ? `${name}_學習區紀錄` : '未命名幼生_學習區紀錄';
+        
         hideLoading();
     } catch (err) { 
         hideLoading(); 
@@ -420,6 +424,7 @@ function clearForm() {
             $('del'+i).style.display = 'none'; $('file'+i).value = '';
             cloudImageData['fileId'+i] = '';
         }
+        document.title = '幼兒學習區紀錄';
     }
 }
 
@@ -460,7 +465,6 @@ function showCategoryDict(categoryName) {
     const container = $('phraseListContainer');
     container.innerHTML = ''; 
     
-    // 使用 DocumentFragment 減少 DOM 頻繁渲染
     const fragment = document.createDocumentFragment();
     dictData[categoryName].forEach(phrase => {
         const item = document.createElement('div');
@@ -494,14 +498,12 @@ function showToast() {
 
 // ==================== 列印與 PDF 輸出檔名控制 ====================
 function printToPDF() {
-    const originalTitle = document.title;
+    // 【重要修復 3】確保列印前網頁標題是正確的姓名，並給手機系統多點時間反應
     const studentName = $('studentName').value.trim();
-    document.title = studentName ? studentName : "未命名幼生_學習區紀錄";
+    document.title = studentName ? `${studentName}_學習區紀錄` : "未命名幼生_學習區紀錄";
     
+    // 延遲放大到 500ms，確保 iOS/Android 系統的背景層有抓到新標題
     setTimeout(() => {
         window.print();
-        setTimeout(() => {
-            document.title = originalTitle;
-        }, 2000);
-    }, 100);
+    }, 500);
 }

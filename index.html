@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, interactive-widget=resizes-content">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
@@ -21,93 +21,26 @@
     /* ==================================================== */
     body { background-color: #e8eaed; font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; padding-top: 160px; display: flex; justify-content: center; }
     
-    /* 頂部選單背景 */
     .top-bar { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: white; padding: 12px; display: flex; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     
-    /* === 網格排版 (Grid)：3排設計 === */
-    .top-bar-row { 
-        display: grid;
-        grid-template-columns: repeat(6, 1fr); /* 切成 6 等份以利分配 */
-        gap: 8px; /* 按鈕之間的間距 */
-        width: 100%;
-        max-width: 700px; /* 控制台整體最大寬度 */
-        margin: 0 auto;
-    }
+    .top-bar-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; width: 100%; max-width: 700px; margin: 0 auto; }
     
-    /* 佔一半 (span 3 / 6) */
     .btn-half { grid-column: span 3; }
-    /* 佔三分之一 (span 2 / 6) */
     .btn-third { grid-column: span 2; }
 
-    /* === 座號輸入框：玻璃珠風格 === */
-    .seat-control {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%; /* 寬度由 Grid 控制 */
-        height: 34px; /* 高度調降 */
-        background-color: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.15), inset 0 10px 20px rgba(255,255,255,0.25);
-        border-radius: 20px; /* 橢圓圓角 */
-        color: #fff;
-        text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-        font-weight: bold;
-        font-family: "Microsoft JhengHei", sans-serif;
-        font-size: 14px;
-        box-sizing: border-box;
-    }
+    .seat-control { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 34px; background-color: rgba(255, 255, 255, 0.15); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 6px rgba(0,0,0,0.15), inset 0 10px 20px rgba(255,255,255,0.25); border-radius: 20px; color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); font-weight: bold; font-family: "Microsoft JhengHei", sans-serif; font-size: 14px; box-sizing: border-box; }
     .seat-input { padding: 2px 4px; font-size: 14px; border-radius: 12px; border: none; width: 45px; text-align: center; font-weight: bold; background: rgba(255,255,255,0.9); color: #333; margin-left: 6px; outline: none; }
     
-    /* === 統一按鈕設計：相同大小、橢圓形透明玻璃珠 === */
-    .btn { 
-        width: 100%; /* 寬度由 Grid 控制 */
-        height: 34px; /* 高度調降 */
-        padding: 0 4px;
-        border-radius: 20px; /* 橢圓圓角 */
-        background-color: rgba(255, 255, 255, 0.15); /* 透明玻璃底色 */
-        backdrop-filter: blur(8px); /* 毛玻璃模糊 */
-        -webkit-backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.4); /* 玻璃光澤邊緣 */
-        box-shadow: 
-            0 4px 6px rgba(0,0,0,0.15), 
-            inset 0 10px 20px rgba(255,255,255,0.25), 
-            inset 0 -2px 5px rgba(0,0,0,0.1); /* 立體透亮反光感 */
-        color: #fff;
-        text-shadow: 1px 1px 3px rgba(0,0,0,0.5); /* 提升文字清晰度 */
-        font-size: 14px; 
-        font-weight: bold; 
-        font-family: "Microsoft JhengHei", sans-serif; 
-        cursor: pointer; 
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
-        box-sizing: border-box;
-    }
-    .btn:hover { 
-        background-color: rgba(255, 255, 255, 0.25);
-        box-shadow: 
-            0 6px 12px rgba(0,0,0,0.2), 
-            inset 0 10px 20px rgba(255,255,255,0.35),
-            inset 0 -2px 5px rgba(0,0,0,0.1);
-        transform: translateY(-2px); 
-    }
-    .btn:active { 
-        transform: scale(0.96) translateY(0); 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 5px 10px rgba(255,255,255,0.1);
-    }
+    .btn { width: 100%; height: 34px; padding: 0 4px; border-radius: 20px; background-color: rgba(255, 255, 255, 0.15); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 6px rgba(0,0,0,0.15), inset 0 10px 20px rgba(255,255,255,0.25), inset 0 -2px 5px rgba(0,0,0,0.1); color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); font-size: 14px; font-weight: bold; font-family: "Microsoft JhengHei", sans-serif; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-sizing: border-box; }
+    .btn:hover { background-color: rgba(255, 255, 255, 0.25); box-shadow: 0 6px 12px rgba(0,0,0,0.2), inset 0 10px 20px rgba(255,255,255,0.35), inset 0 -2px 5px rgba(0,0,0,0.1); transform: translateY(-2px); }
+    .btn:active { transform: scale(0.96) translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 5px 10px rgba(255,255,255,0.1); }
     
-    /* 手機極窄螢幕防止文字擠壓 */
     @media screen and (max-width: 400px) {
         .btn { font-size: 13px; letter-spacing: -0.5px; }
         .seat-control { font-size: 13px; letter-spacing: -0.5px; }
         .seat-input { width: 35px; }
     }
     
-    /* 玻璃珠個別透色 */
     .btn-auth { background-color: rgba(66, 133, 244, 0.25); border-color: rgba(66, 133, 244, 0.6); }
     .btn-save { background-color: rgba(52, 168, 83, 0.25); border-color: rgba(52, 168, 83, 0.6); }
     .btn-load { background-color: rgba(251, 188, 5, 0.25); border-color: rgba(251, 188, 5, 0.6); }
@@ -160,7 +93,8 @@
     /* 2. 手機螢幕友善介面                                    */
     /* ==================================================== */
     @media screen and (max-width: 800px) {
-        body { padding-top: 160px; background-color: #f0f2f5; }
+        /* 【重要修正】給予底部高達 50vh 的留白空間，讓鍵盤有地方可推 */
+        body { padding-top: 160px; padding-bottom: 50vh; background-color: #f0f2f5; }
         .a4-page { width: 100%; height: auto; box-shadow: none; padding: 15px; margin-bottom: 0; border-radius: 0; margin-top: 10px; }
         h1 { font-size: 20px; line-height: 1.5; margin-bottom: 15px; }
         .title-input { background: #fff; border: 1px solid #ccc !important; }
@@ -424,6 +358,6 @@
     </div>
 </div>
 
-<script src="app.js?v=17" defer></script>
+<script src="app.js?v=18" defer></script>
 </body>
 </html>

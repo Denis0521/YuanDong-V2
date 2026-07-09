@@ -1,5 +1,5 @@
-// 版本號升級至 v17，改用「網路優先 (Network First)」策略，徹底解決手機快取不更新的問題
-const CACHE_NAME = 'learn-record-v17';
+// 版本號升級至 v18，改用「網路優先 (Network First)」策略，徹底解決手機快取不更新的問題
+const CACHE_NAME = 'learn-record-v18';
 const urlsToCache = [
   './',
   './index.html',
