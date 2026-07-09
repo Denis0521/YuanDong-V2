@@ -1,5 +1,5 @@
-// 版本號升級至 v14，優化非同步與排除 API 快取干擾
-const CACHE_NAME = 'learn-record-v14';
+// 版本號升級至 v15，優化非同步與排除 API 快取干擾
+const CACHE_NAME = 'learn-record-v15';
 const urlsToCache = [
   './',
   './index.html',
