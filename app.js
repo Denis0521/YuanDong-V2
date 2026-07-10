@@ -70,15 +70,6 @@ window.addEventListener('load', () => {
         $('seatNumber').value = this.value;
     });
 
-    // 【重要修復 1】防鍵盤遮擋：當任何輸入框被點擊時，自動把它滑到畫面中間
-    document.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
-        input.addEventListener('focus', function() {
-            setTimeout(() => {
-                this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300); // 稍微等 0.3 秒讓鍵盤完全彈出來
-        });
-    });
-
     // 【重要修復 2】即時標題綁定：只要打字，網頁檔名就跟著換，確保列印 100% 抓到名字
     $('studentName').addEventListener('input', function() {
         const name = this.value.trim();
