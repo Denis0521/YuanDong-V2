@@ -13,11 +13,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="學習區紀錄">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
 
 <style>
     /* ==================================================== */
-    /* 0. CSS 變數宣告 (優化)                                 */
+    /* 0. CSS 變數宣告                                         */
     /* ==================================================== */
     :root {
         --primary-blue: #1a73e8;
@@ -37,7 +37,7 @@
     /* ==================================================== */
     body { background-color: var(--bg-gray); font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; padding-top: 160px; display: flex; justify-content: center; }
     
-    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, var(--primary-blue) 0%, #0d47a1 100%); color: white; padding: 12px; display: flex; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #4A5568 0%, #2D3748 100%); color: white; padding: 12px; display: flex; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     
     .top-bar-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; width: 100%; max-width: 700px; margin: 0 auto; }
     
@@ -222,9 +222,10 @@
             <input type="number" id="ctrlSeat" class="seat-input" value="1" min="1" max="99">
         </div>
         
-        <button class="btn btn-load btn-third" onclick="cloudLoad()">📥 載入資料</button>
-        <button class="btn btn-save btn-third" onclick="cloudSave()">☁️ 存檔至雲</button>
+        <!-- 交換位置：清除畫面 放前面，載入資料 放後面 -->
         <button class="btn btn-clear btn-third" onclick="clearForm()">🧹 清除畫面</button>
+        <button class="btn btn-save btn-third" onclick="cloudSave()">☁️ 存檔至雲</button>
+        <button class="btn btn-load btn-third" onclick="cloudLoad()">📥 載入資料</button>
         
         <button class="btn btn-print btn-third" onclick="printToPDF()">🖨️ 轉存 PDF</button>
         <button class="btn btn-dict btn-third" onclick="openDictModal()">💡 重點能力</button>
@@ -328,7 +329,7 @@
 <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeInfo()">✖</button>
-        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：發行版V1.01</span></h2>
+        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：發行版V1.02</span></h2>
         
         <div class="modal-section">
             <h3>⚠️ Google 第一次登入常見問題處理</h3>
@@ -382,6 +383,6 @@
     </div>
 </div>
 
-<script src="app.js?v=v1.01" defer></script>
+<script src="app.js?v=v1.02" defer></script>
 </body>
 </html>
