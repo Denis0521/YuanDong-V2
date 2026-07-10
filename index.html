@@ -106,7 +106,7 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     /* ==================================================== */
-    /* 2. 手機螢幕友善介面                                    */
+    /* 2. 手機螢幕友善介面 (重構：學習區自動轉為左3右3)           */
     /* ==================================================== */
     @media screen and (max-width: 800px) {
         body { padding-top: 160px; background-color: #f0f2f5; }
@@ -117,12 +117,20 @@
         .header-col { display: flex; flex-direction: row; align-items: center; }
         .class-col { width: calc(40% - 6px); } .name-col { width: calc(60% - 6px); } .seat-col { width: calc(32% - 6px); } .date-col { width: calc(68% - 6px); }
         .header-col input, .header-col select { flex-grow: 1; width: 100%; height: 42px; border: 1px solid #ccc !important; background: #fff; text-align: left; padding: 0 10px; font-size: 16px;}
-        table.main-table, table.main-table tbody { display: block; width: 100%; border: none; }
-        table.main-table tr { display: flex; flex-wrap: wrap; width: 100%; border: none; }
-        table.main-table td { display: block; border: none; }
-        .checkbox-cell { width: 50%; height: 50px; display: flex; align-items: center; justify-content: flex-start; padding-left: 15px !important; border-bottom: 1px solid #eee; background: #fff; box-sizing: border-box;}
+        
+        /* 核心修改：利用 display: contents 讓 td 忽略 tr 的限制，直接排成 2欄x3列 */
+        table.main-table { display: block; width: 100%; border: none; }
+        table.main-table tbody { display: flex; flex-wrap: wrap; width: 100%; }
+        table.main-table tr { display: contents; } 
+        table.main-table td { display: block; border: none; box-sizing: border-box; }
+        
+        /* 每個選項佔 50%，剛好變成左3右3 */
+        .checkbox-cell { width: 50%; flex: 0 0 50%; height: 50px; display: flex; align-items: center; justify-content: flex-start; padding-left: 15px !important; border-bottom: 1px solid #eee; background: #fff; }
         .checkbox-cell input[type="checkbox"] { transform: scale(1.5); margin-right: 10px; }
-        td.photo-wrapper-td { width: 100%; margin-top: 20px; border: 2px solid var(--primary-blue) !important; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #fff; display: block; box-sizing: border-box; }
+        
+        /* 相片區塊佔 100%，自動往下排列 */
+        td.photo-wrapper-td { width: 100%; flex: 0 0 100%; margin-top: 20px; border: 2px solid var(--primary-blue) !important; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #fff; }
+        
         .photo-cell { height: auto; }
         .photo-area { height: 280px; background-color: #f8f9fa; border-bottom: 2px solid var(--primary-blue); }
         .text-area { height: auto; padding: 15px; gap: 12px; }
@@ -138,7 +146,7 @@
     }
 
     /* ==================================================== */
-    /* 3. 列印與 PDF 輸出專用                                 */
+    /* 3. 列印與 PDF 輸出專用 (固定為上3下3)                    */
     /* ==================================================== */
     @media print {
         @page { margin: 0; size: A4 portrait; }
@@ -151,6 +159,8 @@
         .header-col input, .header-col select { margin-left: 4px !important; margin-top: 0 !important; font-size: 16px !important; height: auto !important; border: none !important; border-radius: 0 !important; padding: 0 !important; text-align: center !important; background: transparent !important; }
         .class-col select { width: 75px !important; } .name-col input { width: 100px !important; } .seat-col input { width: 45px !important; } .date-col input { width: 150px !important; text-align: left !important; }
         .title-input { background: transparent !important; border: none !important; }
+        
+        /* 鎖定表格結構，維持 3欄x2列 */
         table.main-table { display: table !important; width: 100% !important; border-collapse: collapse !important; border: 1px solid var(--border-color) !important; }
         table.main-table tbody { display: table-row-group !important; }
         table.main-table tr { display: table-row !important; flex-wrap: nowrap !important; width: auto !important; }
@@ -158,6 +168,7 @@
         .checkbox-cell { width: auto !important; height: 38px !important; display: table-cell !important; padding: 4px 10px !important; }
         .checkbox-cell input[type="checkbox"] { transform: scale(1.2) !important; }
         td.photo-wrapper-td { display: table-cell !important; width: 50% !important; margin-top: 0 !important; border: 1px solid var(--border-color) !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important; }
+        
         .photo-cell { height: 410px !important; }
         .photo-area { height: 250px !important; background-color: transparent !important; border-bottom: 1px solid var(--border-color) !important; }
         .text-area { height: 160px !important; padding: 6px 8px !important; background-color: transparent !important; gap: 0 !important; }
@@ -233,7 +244,6 @@
 
     <div class="table-wrapper">
         <table class="main-table">
-            <!-- 【修改點】：將這裡改為 3欄 x 2列，每欄使用 colspan="2" 以配合總數為 6 的表格架構 -->
             <tr>
                 <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">✂️</span><input type="checkbox" id="cb1"> 美勞區</td>
                 <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">📚</span><input type="checkbox" id="cb2"> 語文區</td>
@@ -318,7 +328,7 @@
 <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeInfo()">✖</button>
-        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：發行版</span></h2>
+        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：發行版V1.01</span></h2>
         
         <div class="modal-section">
             <h3>⚠️ Google 第一次登入常見問題處理</h3>
@@ -372,6 +382,6 @@
     </div>
 </div>
 
-<script src="app.js?v=20" defer></script>
+<script src="app.js?v=v1.01" defer></script>
 </body>
 </html>
