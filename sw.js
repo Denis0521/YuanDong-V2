@@ -1,5 +1,5 @@
-// 版本號升級至 v18，改用「網路優先 (Network First)」策略，徹底解決手機快取不更新的問題
-const CACHE_NAME = 'learn-record-v18';
+// 版本號升級至 v20，改用「網路優先 (Network First)」策略，確保抓到最新排版與優化代碼
+const CACHE_NAME = 'learn-record-v20';
 const urlsToCache = [
   './',
   './index.html',
@@ -40,7 +40,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 【核心修改】網路優先 (Network First) 策略
+  // 網路優先 (Network First) 策略
   // 每次開啟 APP 都會先嘗試抓取最新檔案，如果沒網路才退回使用快取
   event.respondWith(
     fetch(event.request)
