@@ -16,40 +16,110 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
-    /* ==================================================== */
-    /* 0. CSS 變數宣告 (顏色匹配您的截圖)                      */
-    /* ==================================================== */
     :root {
         --primary-blue: #1a73e8;
         --bg-gray: #e8eaed;
         --border-color: #000;
     }
 
-    /* ==================================================== */
-    /* 1. 全局與電腦版預設版面 (A4 完美比例)                   */
-    /* ==================================================== */
-    body { background-color: var(--bg-gray); font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; padding-top: 140px; display: flex; justify-content: center; }
-    
-    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #353745; color: white; padding: 10px; display: flex; justify-content: center; z-index: 1000; border-bottom: 1px solid #222; }
-    
-    .top-bar-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; width: 100%; max-width: 700px; margin: 0 auto; }
-    
+    * { box-sizing: border-box; }
+
+    body { 
+        background-color: var(--bg-gray); 
+        font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; 
+        margin: 0; 
+        padding: 0; 
+        padding-top: 140px; 
+        display: flex; 
+        justify-content: center; 
+    }
+
+    .top-bar { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        right: 0; 
+        background: #353745; 
+        color: white; 
+        padding: 10px; 
+        display: flex; 
+        justify-content: center; 
+        z-index: 1000; 
+        border-bottom: 1px solid #222; 
+    }
+
+    .top-bar-row { 
+        display: grid; 
+        grid-template-columns: repeat(6, 1fr); 
+        gap: 8px; 
+        width: 100%; 
+        max-width: 700px; 
+        margin: 0 auto; 
+    }
+
     .btn-half { grid-column: span 3; }
     .btn-third { grid-column: span 2; }
 
-    .seat-control { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 34px; background: linear-gradient(to bottom, #595a68, #424350); border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.1); border-radius: 20px; color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); font-weight: bold; font-family: "Microsoft JhengHei", sans-serif; font-size: 14px; box-sizing: border-box; }
-    .seat-input { padding: 2px 4px; font-size: 14px; border-radius: 12px; border: none; width: 45px; text-align: center; font-weight: bold; background: rgba(255,255,255,0.9); color: #333; margin-left: 6px; outline: none; }
-    
-    .btn { width: 100%; height: 34px; padding: 0 4px; border-radius: 20px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.1); color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); font-size: 14px; font-weight: bold; font-family: "Microsoft JhengHei", sans-serif; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-sizing: border-box; }
+    .seat-control { 
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center; 
+        width: 100%; 
+        height: 34px; 
+        background: linear-gradient(to bottom, #595a68, #424350); 
+        border: 1px solid rgba(255, 255, 255, 0.15); 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.1); 
+        border-radius: 20px; 
+        color: #fff; 
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.5); 
+        font-weight: bold; 
+        font-family: "Microsoft JhengHei", sans-serif; 
+        font-size: 14px; 
+    }
+
+    .seat-input { 
+        padding: 2px 4px; 
+        font-size: 14px; 
+        border-radius: 12px; 
+        border: none; 
+        width: 45px; 
+        text-align: center; 
+        font-weight: bold; 
+        background: rgba(255,255,255,0.9); 
+        color: #333; 
+        margin-left: 6px; 
+        outline: none; 
+    }
+
+    .btn { 
+        width: 100%; 
+        height: 34px; 
+        padding: 0 4px; 
+        border-radius: 20px; 
+        background: rgba(255, 255, 255, 0.15); 
+        border: 1px solid rgba(255, 255, 255, 0.15); 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.1); 
+        color: #fff; 
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.5); 
+        font-size: 14px; 
+        font-weight: bold; 
+        font-family: "Microsoft JhengHei", sans-serif; 
+        cursor: pointer; 
+        display: inline-flex; 
+        justify-content: center; 
+        align-items: center; 
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+    }
+
     .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
     .btn:active { transform: scale(0.96) translateY(0); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-    
+
     @media screen and (max-width: 400px) {
         .btn { font-size: 13px; letter-spacing: -0.5px; }
         .seat-control { font-size: 13px; letter-spacing: -0.5px; }
         .seat-input { width: 35px; }
     }
-    
+
     .btn-auth { background: linear-gradient(to bottom, #4285f4, #2b5cbf); }
     .btn-clear { background: linear-gradient(to bottom, #775c88, #594165); }
     .btn-save { background: linear-gradient(to bottom, #53886f, #3b624f); }
@@ -58,151 +128,776 @@
     .btn-dict { background: linear-gradient(to bottom, #a7883a, #786326); } 
     .btn-info { background: linear-gradient(to bottom, #49859a, #305869); } 
 
-    .a4-page { width: 210mm; height: 297mm; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.3); padding: 10mm 15mm 10mm 15mm; box-sizing: border-box; position: relative; margin-bottom: 30px; overflow: hidden; }
-    
-    h1 { text-align: center; font-size: 19px; margin: 0 0 8px 0; font-weight: bold; letter-spacing: 0.5px; }
-    .title-input { font-size: 19px; font-family: inherit; border: none; text-align: center; outline: none; font-weight: bold; background: rgba(0,0,0,0.04); border-radius: 4px; }
-    .title-input.year { width: 50px; } .title-input.term { width: 30px; }
-    
-    .header-info { display: flex; justify-content: space-between; align-items: center; font-size: 16px; margin-bottom: 10px; width: 100%; }
-    .header-col { display: flex; align-items: center; white-space: nowrap; }
-    .header-col input, .header-col select { font-size: 16px; font-family: inherit; border: none; outline: none; background: rgba(0,0,0,0.05); border-radius: 4px; padding: 4px 6px; margin-left: 6px; text-align: center; color: #000; }
-    .class-col select { width: 75px; } .name-col input { width: 100px; } .seat-col input { width: 45px; } .date-col input { width: 150px; text-align: left; padding-left: 8px;} 
+    .a4-page { 
+        width: 210mm; 
+        min-height: 297mm; 
+        background: white; 
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
+        padding: 10mm 15mm 10mm 15mm; 
+        position: relative; 
+        margin-bottom: 30px; 
+        overflow: hidden; 
+    }
+
+    h1 { 
+        text-align: center; 
+        font-size: 19px; 
+        margin: 0 0 8px 0; 
+        font-weight: bold; 
+        letter-spacing: 0.5px; 
+    }
+
+    .title-input { 
+        font-size: 19px; 
+        font-family: inherit; 
+        border: none; 
+        text-align: center; 
+        outline: none; 
+        font-weight: bold; 
+        background: rgba(0,0,0,0.04); 
+        border-radius: 4px; 
+    }
+
+    .title-input.year { width: 50px; } 
+    .title-input.term { width: 30px; }
+
+    .header-info { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        font-size: 16px; 
+        margin-bottom: 10px; 
+        width: 100%; 
+    }
+
+    .header-col { 
+        display: flex; 
+        align-items: center; 
+        white-space: nowrap; 
+    }
+
+    .header-col input, .header-col select { 
+        font-size: 16px; 
+        font-family: inherit; 
+        border: none; 
+        outline: none; 
+        background: rgba(0,0,0,0.05); 
+        border-radius: 4px; 
+        padding: 4px 6px; 
+        margin-left: 6px; 
+        text-align: center; 
+        color: #000; 
+    }
+
+    .class-col select { width: 75px; } 
+    .name-col input { width: 100px; } 
+    .seat-col input { width: 45px; } 
+    .date-col input { width: 150px; text-align: left; padding-left: 8px; } 
 
     .table-wrapper { width: 100%; }
-    table.main-table { width: 100%; border-collapse: collapse; border: 1px solid var(--border-color); table-layout: fixed; }
-    table.main-table td { border: 1px solid var(--border-color); padding: 0; vertical-align: top; } 
-    .checkbox-cell { padding: 4px 10px !important; text-align: left; font-size: 16px; vertical-align: middle !important; height: 38px; }
-    .checkbox-cell input[type="checkbox"] { transform: scale(1.2); margin-right: 4px; vertical-align: middle; cursor: pointer; }
-    .checkbox-icon { font-size: 16px; margin-right: 3px; vertical-align: middle; }
 
-    .photo-cell { display: flex; flex-direction: column; height: 410px; box-sizing: border-box; position: relative; }
-    .photo-area { height: 250px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border-color); cursor: pointer; overflow: hidden; position: relative; background-color: #f9f9f9; -webkit-tap-highlight-color: transparent; }
+    table.main-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        border: 1px solid var(--border-color); 
+        table-layout: fixed; 
+    }
+
+    table.main-table td { 
+        border: 1px solid var(--border-color); 
+        padding: 0; 
+        vertical-align: top; 
+    } 
+
+    .checkbox-cell { 
+        padding: 4px 10px !important; 
+        text-align: left; 
+        font-size: 16px; 
+        vertical-align: middle !important; 
+        height: 38px; 
+    }
+
+    .checkbox-cell input[type="checkbox"] { 
+        transform: scale(1.2); 
+        margin-right: 4px; 
+        vertical-align: middle; 
+        cursor: pointer; 
+    }
+
+    .checkbox-icon { 
+        font-size: 16px; 
+        margin-right: 3px; 
+        vertical-align: middle; 
+    }
+
+    .photo-cell { 
+        display: flex; 
+        flex-direction: column; 
+        height: 410px; 
+        position: relative; 
+    }
+
+    .photo-area { 
+        height: 250px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        border-bottom: 1px solid var(--border-color); 
+        cursor: pointer; 
+        overflow: hidden; 
+        position: relative; 
+        background-color: #f9f9f9; 
+        -webkit-tap-highlight-color: transparent; 
+    }
+
     .photo-area:active { background-color: #e0e0e0; }
-    .photo-area img { width: 100%; height: 100%; object-fit: contain; display: none; }
-    .photo-placeholder { color: #888; font-size: 12px; text-align: center; padding: 2px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; pointer-events: none; }
-    .delete-btn { position: absolute; top: 4px; right: 4px; background-color: rgba(244, 67, 54, 0.85); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; line-height: 22px; text-align: center; cursor: pointer; z-index: 10; display: none; }
-    
-    .text-area { padding: 6px 8px; font-size: 15px; display: flex; flex-direction: column; justify-content: space-between; height: 160px; box-sizing: border-box; }
-    .tf-row { display: flex; align-items: center; width: 100%; }
-    .tf-row input { flex-grow: 1; font-size: 15px; font-family: inherit; border: none; outline: none; background: rgba(0,0,0,0.04); border-radius: 4px; padding: 2px 6px; min-height: 24px; }
-    .top-line { border-top: 1px solid var(--border-color); padding-top: 6px; margin-top: 4px; }
-    .text-label { font-weight: normal; flex-shrink: 0; font-size: 15px; }
-    
-    .footer-container { display: flex; justify-content: space-between; align-items: center; font-size: 15px; padding: 8px 4px 0 4px; }
-    .footer-container input { font-size: 15px; font-family: inherit; border: none; outline: none; width: 100px; text-align: center; background: rgba(0,0,0,0.04); border-radius: 4px; padding: 2px 4px;}
+
+    .photo-area img { 
+        width: 100%; 
+        height: 100%; 
+        object-fit: contain; 
+        display: none; 
+    }
+
+    .photo-placeholder { 
+        color: #888; 
+        font-size: 12px; 
+        text-align: center; 
+        padding: 2px; 
+        position: absolute; 
+        top: 50%; 
+        left: 50%; 
+        transform: translate(-50%, -50%); 
+        width: 100%; 
+        pointer-events: none; 
+    }
+
+    .delete-btn { 
+        position: absolute; 
+        top: 4px; 
+        right: 4px; 
+        background-color: rgba(244, 67, 54, 0.85); 
+        color: white; 
+        border: none; 
+        border-radius: 50%; 
+        width: 22px; 
+        height: 22px; 
+        font-size: 12px; 
+        line-height: 22px; 
+        text-align: center; 
+        cursor: pointer; 
+        z-index: 10; 
+        display: none; 
+    }
+
+    .text-area { 
+        padding: 6px 8px; 
+        font-size: 15px; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: space-between; 
+        height: 160px; 
+    }
+
+    .tf-row { 
+        display: flex; 
+        align-items: center; 
+        width: 100%; 
+    }
+
+    .tf-row input { 
+        flex-grow: 1; 
+        font-size: 15px; 
+        font-family: inherit; 
+        border: none; 
+        outline: none; 
+        background: rgba(0,0,0,0.04); 
+        border-radius: 4px; 
+        padding: 2px 6px; 
+        min-height: 24px; 
+    }
+
+    .top-line { 
+        border-top: 1px solid var(--border-color); 
+        padding-top: 6px; 
+        margin-top: 4px; 
+    }
+
+    .text-label { 
+        font-weight: normal; 
+        flex-shrink: 0; 
+        font-size: 15px; 
+    }
+
+    .footer-container { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        font-size: 15px; 
+        padding: 8px 4px 0 4px; 
+    }
+
+    .footer-container input { 
+        font-size: 15px; 
+        font-family: inherit; 
+        border: none; 
+        outline: none; 
+        width: 100px; 
+        text-align: center; 
+        background: rgba(0,0,0,0.04); 
+        border-radius: 4px; 
+        padding: 2px 4px;
+    }
+
     .footer-note { font-weight: bold; font-size: 14px; }
 
-    .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 3000; justify-content: center; align-items: center; flex-direction: column; color: white; font-family: "Microsoft JhengHei", sans-serif; font-size: 16px; text-align: center;}
-    .spinner { border: 5px solid #f3f3f3; border-top: 5px solid #34a853; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loader-overlay { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%; 
+        background: rgba(0,0,0,0.85); 
+        display: none; 
+        z-index: 3000; 
+        justify-content: center; 
+        align-items: center; 
+        flex-direction: column; 
+        color: white; 
+        font-family: "Microsoft JhengHei", sans-serif; 
+        font-size: 16px; 
+        text-align: center;
+    }
 
-    /* ==================================================== */
-    /* 2. 螢幕觀看專屬設定 (隱藏學習區格線，並確保相片區顯示框線) */
-    /* ==================================================== */
+    .spinner { 
+        border: 5px solid #f3f3f3; 
+        border-top: 5px solid #34a853; 
+        border-radius: 50%; 
+        width: 40px; 
+        height: 40px; 
+        animation: spin 1s linear infinite; 
+        margin-bottom: 15px; 
+    }
+
+    @keyframes spin { 
+        0% { transform: rotate(0deg); } 
+        100% { transform: rotate(360deg); } 
+    }
+
     @media screen {
-        /* 將一般 td 框線隱藏 */
         table.main-table { border: none !important; }
         table.main-table td { border: none !important; }
-        
-        /* 🔥 透過提高優先級，確保「相片輸入欄」在螢幕上一定有框線 🔥 */
-        table.main-table td.photo-wrapper-td { border: 1px solid var(--border-color) !important; }
+        table.main-table td.photo-wrapper-td { 
+            border: 1px solid var(--border-color) !important; 
+        }
     }
 
-    /* ==================================================== */
-    /* 3. 手機版友善介面                                      */
-    /* ==================================================== */
     @media screen and (max-width: 800px) {
-        body { padding-top: 130px; background-color: #fff; }
-        .a4-page { width: 100%; height: auto; box-shadow: none; padding: 15px; margin-top: 0; margin-bottom: 0; border-radius: 0; }
-        
-        h1 { font-size: 20px; line-height: 1.5; margin-bottom: 15px; }
-        .title-input { background: #fff; border: 1px solid #ccc !important; }
-        .header-info { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 15px; }
-        .header-col { display: flex; flex-direction: row; align-items: center; }
-        .class-col { width: calc(40% - 6px); } .name-col { width: calc(60% - 6px); } .seat-col { width: calc(32% - 6px); } .date-col { width: calc(68% - 6px); }
-        .header-col input, .header-col select { flex-grow: 1; width: 100%; height: 42px; border: 1px solid #ccc !important; background: #fff; text-align: left; padding: 0 10px; font-size: 16px;}
-        
-        table.main-table { display: flex; flex-wrap: wrap; width: 100%; border: none !important; }
+        body { 
+            padding-top: 130px; 
+            background-color: #fff; 
+        }
+
+        .a4-page { 
+            width: 100%; 
+            height: auto; 
+            box-shadow: none; 
+            padding: 15px; 
+            margin-top: 0; 
+            margin-bottom: 0; 
+            border-radius: 0; 
+        }
+
+        h1 { 
+            font-size: 20px; 
+            line-height: 1.5; 
+            margin-bottom: 15px; 
+        }
+
+        .title-input { 
+            background: #fff; 
+            border: 1px solid #ccc !important; 
+        }
+
+        .header-info { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 12px; 
+            margin-bottom: 15px; 
+        }
+
+        .header-col { 
+            display: flex; 
+            flex-direction: row; 
+            align-items: center; 
+        }
+
+        .class-col { width: calc(40% - 6px); } 
+        .name-col { width: calc(60% - 6px); } 
+        .seat-col { width: calc(32% - 6px); } 
+        .date-col { width: calc(68% - 6px); }
+
+        .header-col input, .header-col select { 
+            flex-grow: 1; 
+            width: 100%; 
+            height: 42px; 
+            border: 1px solid #ccc !important; 
+            background: #fff; 
+            text-align: left; 
+            padding: 0 10px; 
+            font-size: 16px;
+        }
+
+        table.main-table { 
+            display: flex; 
+            flex-wrap: wrap; 
+            width: 100%; 
+            border: none !important; 
+        }
+
         table.main-table tbody, table.main-table tr { display: contents; }
-        .checkbox-cell { flex: 0 0 50%; max-width: 50%; height: 50px; display: flex; align-items: center; justify-content: flex-start; padding-left: 15px !important; border: none !important; background: #fff; box-sizing: border-box;}
-        .checkbox-cell input[type="checkbox"] { transform: scale(1.5); margin-right: 10px; }
-        
-        td.photo-wrapper-td { flex: 0 0 100%; max-width: 100%; display: block; margin-top: 20px; border: 2px solid var(--primary-blue) !important; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #fff; box-sizing: border-box; }
-        
+
+        .checkbox-cell { 
+            flex: 0 0 50%; 
+            max-width: 50%; 
+            height: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: flex-start; 
+            padding-left: 15px !important; 
+            border: none !important; 
+            background: #fff; 
+        }
+
+        .checkbox-cell input[type="checkbox"] { 
+            transform: scale(1.5); 
+            margin-right: 10px; 
+        }
+
+        td.photo-wrapper-td { 
+            flex: 0 0 100%; 
+            max-width: 100%; 
+            display: block; 
+            margin-top: 20px; 
+            border: 2px solid #000 !important; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            background: #fff; 
+        }
+
         .photo-cell { height: auto; }
-        .photo-area { height: 280px; background-color: #f8f9fa; border-bottom: 2px solid var(--primary-blue); }
-        .text-area { height: auto; padding: 15px; gap: 12px; }
-        .tf-row { flex-direction: column; align-items: flex-start; width: 100%; }
-        .tf-row.inline-mobile { flex-direction: row; align-items: center; } 
-        .tf-row.inline-mobile input[type="text"] { width: auto; flex-grow: 1; margin-left: 10px; margin-top: 0; }
-        .text-label { font-size: 15px; color: var(--primary-blue); font-weight: bold; margin-bottom: 4px; }
-        .tf-row input[type="text"] { border: 1px solid #ccc !important; height: 45px; font-size: 16px !important; border-radius: 6px; padding: 0 12px !important; background: #fff; width: 100%; box-sizing: border-box; margin-top: 4px; }
-        .top-line { border: none; padding: 0; margin-top: 10px; }
-        .footer-container { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: center; padding-top: 25px; gap: 15px; }
-        .footer-container div { width: 100%; display: flex; flex-direction: row; align-items: center; }
-        .footer-container input { flex-grow: 1; height: 45px; font-size: 16px; border: 1px solid #ccc !important; border-radius: 6px; text-align: left; padding: 0 12px; margin-left: 10px; background: #fff;}
+
+        .photo-area { 
+            height: 280px; 
+            background-color: #f8f9fa; 
+            border-bottom: 2px solid #000; 
+        }
+
+        .text-area { 
+            height: auto; 
+            padding: 15px; 
+            gap: 12px; 
+        }
+
+        .tf-row { 
+            flex-direction: column; 
+            align-items: flex-start; 
+            width: 100%; 
+        }
+
+        .tf-row.inline-mobile { 
+            flex-direction: row; 
+            align-items: center; 
+        } 
+
+        .tf-row.inline-mobile input[type="text"] { 
+            width: auto; 
+            flex-grow: 1; 
+            margin-left: 10px; 
+            margin-top: 0; 
+        }
+
+        .text-label { 
+            font-size: 15px; 
+            color: var(--primary-blue); 
+            font-weight: bold; 
+            margin-bottom: 4px; 
+        }
+
+        .tf-row input[type="text"] { 
+            border: 1px solid #ccc !important; 
+            height: 45px; 
+            font-size: 16px !important; 
+            border-radius: 6px; 
+            padding: 0 12px !important; 
+            background: #fff; 
+            width: 100%; 
+            margin-top: 4px; 
+        }
+
+        .top-line { 
+            border: none; 
+            padding: 0; 
+            margin-top: 10px; 
+        }
+
+        .footer-container { 
+            display: flex; 
+            flex-direction: row; 
+            flex-wrap: wrap; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding-top: 25px; 
+            gap: 15px; 
+        }
+
+        .footer-container div { 
+            width: 100%; 
+            display: flex; 
+            flex-direction: row; 
+            align-items: center; 
+        }
+
+        .footer-container input { 
+            flex-grow: 1; 
+            height: 45px; 
+            font-size: 16px; 
+            border: 1px solid #ccc !important; 
+            border-radius: 6px; 
+            text-align: left; 
+            padding: 0 12px; 
+            margin-left: 10px; 
+            background: #fff;
+        }
     }
 
-    /* ==================================================== */
-    /* 4. 列印與 PDF 輸出專用 (已 100% 完整退回您最原始的代碼) */
-    /* 遵守您的指示，這一段程式碼原封不動，絕不影響 PDF！      */
-    /* ==================================================== */
     @media print {
-        @page { margin: 0; size: A4 portrait; }
-        body { background-color: white; padding: 0; margin: 0; display: block; }
+        @page { 
+            margin: 0; 
+            size: A4 portrait; 
+        }
+
+        body { 
+            background-color: white; 
+            padding: 0; 
+            margin: 0; 
+            display: block; 
+        }
+
         .top-bar, .delete-btn { display: none !important; }
+
         .table-wrapper { overflow-x: visible; }
-        .a4-page { box-shadow: none !important; margin: 0 auto !important; padding: 10mm 15mm 10mm 15mm !important; width: 210mm !important; height: 296mm !important; overflow: hidden !important; page-break-after: always !important; display: block !important; border-radius: 0 !important; }
-        .header-info { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; width: 100% !important; margin-bottom: 6px !important;}
-        .header-col { width: auto !important; display: flex !important; flex-direction: row !important; align-items: center !important; }
-        .header-col input, .header-col select { margin-left: 4px !important; margin-top: 0 !important; font-size: 16px !important; height: auto !important; border: none !important; border-radius: 0 !important; padding: 0 !important; text-align: center !important; background: transparent !important; }
-        .class-col select { width: 75px !important; } .name-col input { width: 100px !important; } .seat-col input { width: 45px !important; } .date-col input { width: 150px !important; text-align: left !important; }
-        .title-input { background: transparent !important; border: none !important; }
-        
-        /* 🔥 完全保留原汁原味的 PDF 表格框線 🔥 */
-        table.main-table { display: table !important; width: 100% !important; border-collapse: collapse !important; border: 1px solid var(--border-color) !important; }
+
+        .a4-page { 
+            box-shadow: none !important; 
+            margin: 0 auto !important; 
+            padding: 15mm 15mm 15mm 15mm !important; 
+            width: 210mm !important; 
+            height: 267mm !important; 
+            overflow: hidden !important; 
+            page-break-after: always !important; 
+            display: block !important; 
+            border-radius: 0 !important; 
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+        }
+
+        .header-info { 
+            display: flex !important; 
+            flex-direction: row !important; 
+            flex-wrap: nowrap !important; 
+            justify-content: space-between !important; 
+            width: 100% !important; 
+            margin-bottom: 6px !important;
+        }
+
+        .header-col { 
+            width: auto !important; 
+            display: flex !important; 
+            flex-direction: row !important; 
+            align-items: center !important; 
+        }
+
+        .header-col input, .header-col select { 
+            margin-left: 4px !important; 
+            margin-top: 0 !important; 
+            font-size: 16px !important; 
+            height: auto !important; 
+            border: none !important; 
+            border-radius: 0 !important; 
+            padding: 0 !important; 
+            text-align: center !important; 
+            background: transparent !important; 
+        }
+
+        .class-col select { width: 75px !important; } 
+        .name-col input { width: 100px !important; } 
+        .seat-col input { width: 45px !important; } 
+        .date-col input { width: 150px !important; text-align: left !important; }
+
+        .title-input { 
+            background: transparent !important; 
+            border: none !important; 
+        }
+
+        table.main-table { 
+            display: table !important; 
+            width: 100% !important; 
+            border-collapse: collapse !important; 
+            border: 1px solid var(--border-color) !important; 
+        }
+
         table.main-table tbody { display: table-row-group !important; }
         table.main-table tr { display: table-row !important; flex-wrap: nowrap !important; width: auto !important; }
-        table.main-table td { display: table-cell !important; border: 1px solid var(--border-color) !important; }
-        .checkbox-cell { width: auto !important; height: 38px !important; display: table-cell !important; padding: 4px 10px !important; }
+
+        table.main-table td { 
+            display: table-cell !important; 
+            border: 1px solid var(--border-color) !important; 
+        }
+
+        .checkbox-cell { 
+            width: auto !important; 
+            height: 38px !important; 
+            display: table-cell !important; 
+            padding: 4px 10px !important; 
+        }
+
         .checkbox-cell input[type="checkbox"] { transform: scale(1.2) !important; }
-        td.photo-wrapper-td { display: table-cell !important; width: 50% !important; margin-top: 0 !important; border: 1px solid var(--border-color) !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important; }
-        
+
+        td.photo-wrapper-td { 
+            display: table-cell !important; 
+            width: 50% !important; 
+            margin-top: 0 !important; 
+            border: 1px solid var(--border-color) !important; 
+            border-radius: 0 !important; 
+            box-shadow: none !important; 
+            padding: 0 !important; 
+        }
+
         .photo-cell { height: 410px !important; }
-        .photo-area { height: 250px !important; background-color: transparent !important; border-bottom: 1px solid var(--border-color) !important; }
-        .text-area { height: 160px !important; padding: 6px 8px !important; background-color: transparent !important; gap: 0 !important; }
-        .tf-row { flex-direction: row !important; align-items: center !important; }
-        .text-label { font-size: 15px !important; color: #000 !important; font-weight: normal !important; margin-bottom: 0 !important; }
-        .tf-row input[type="text"] { border: none !important; height: auto !important; font-size: 15px !important; border-radius: 0 !important; margin-top: 0 !important; padding: 0 6px !important; background: transparent !important; }
-        .top-line { border-top: 1px solid var(--border-color) !important; padding-top: 6px !important; margin-top: 4px !important; }
-        .footer-container { display: flex !important; flex-direction: row !important; align-items: center !important; padding-top: 8px !important; gap: 0 !important;}
-        .footer-container div { width: auto !important; display: block !important; }
-        .footer-container input { width: 100px !important; height: auto !important; font-size: 15px !important; border: none !important; text-align: center !important; padding: 0 !important; margin-top: 0 !important; margin-left:0 !important; background: transparent !important; }
+
+        .photo-area { 
+            height: 250px !important; 
+            background-color: transparent !important; 
+            border-bottom: 1px solid var(--border-color) !important; 
+        }
+
+        .text-area { 
+            height: 160px !important; 
+            padding: 6px 8px !important; 
+            background-color: transparent !important; 
+            gap: 0 !important; 
+        }
+
+        .tf-row { 
+            flex-direction: row !important; 
+            align-items: center !important; 
+        }
+
+        .text-label { 
+            font-size: 15px !important; 
+            color: #000 !important; 
+            font-weight: normal !important; 
+            margin-bottom: 0 !important; 
+        }
+
+        .tf-row input[type="text"] { 
+            border: none !important; 
+            height: auto !important; 
+            font-size: 15px !important; 
+            border-radius: 0 !important; 
+            margin-top: 0 !important; 
+            padding: 0 6px !important; 
+            background: transparent !important; 
+        }
+
+        .top-line { 
+            border-top: 1px solid var(--border-color) !important; 
+            padding-top: 6px !important; 
+            margin-top: 4px !important; 
+        }
+
+        .footer-container { 
+            display: flex !important; 
+            flex-direction: row !important; 
+            align-items: center !important; 
+            padding-top: 8px !important; 
+            gap: 0 !important;
+        }
+
+        .footer-container div { 
+            width: auto !important; 
+            display: block !important; 
+        }
+
+        .footer-container input { 
+            width: 100px !important; 
+            height: auto !important; 
+            font-size: 15px !important; 
+            border: none !important; 
+            text-align: center !important; 
+            padding: 0 !important; 
+            margin-top: 0 !important; 
+            margin-left:0 !important; 
+            background: transparent !important; 
+        }
+
         .header-info select { appearance: none; -webkit-appearance: none; }
         .photo-placeholder { display: none !important; }
     }
 
-    /* ==================================================== */
-    /* 5. 彈出視窗共用樣式 (說明與詞庫)                        */
-    /* ==================================================== */
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 4000; display: none; justify-content: center; align-items: center; padding: 20px; }
-    .modal-content { background: #fff; width: 100%; max-width: 600px; border-radius: 8px; padding: 25px; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-family: "Microsoft JhengHei", sans-serif; }
-    .modal-close { position: absolute; top: 15px; right: 15px; cursor: pointer; font-size: 24px; border: none; background: transparent; color: #888; }
-    .modal-title { font-size: 21px; font-weight: bold; margin-top: 0; margin-bottom: 15px; color: var(--primary-blue); border-bottom: 2px solid #eee; padding-bottom: 10px; text-align: left; }
-    .modal-section { margin-bottom: 20px; font-size: 15px; line-height: 1.6; text-align: left; }
-    .modal-section h3 { font-size: 17px; margin: 0 0 8px 0; color: #333; display: flex; align-items: center; font-weight: bold; }
+    .modal-overlay { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        right: 0; 
+        bottom: 0; 
+        background: rgba(0,0,0,0.6); 
+        z-index: 4000; 
+        display: none; 
+        justify-content: center; 
+        align-items: center; 
+        padding: 20px; 
+    }
+
+    .modal-content { 
+        background: #fff; 
+        width: 100%; 
+        max-width: 600px; 
+        border-radius: 8px; 
+        padding: 25px; 
+        max-height: 85vh; 
+        overflow-y: auto; 
+        position: relative; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        font-family: "Microsoft JhengHei", sans-serif; 
+    }
+
+    .modal-close { 
+        position: absolute; 
+        top: 15px; 
+        right: 15px; 
+        cursor: pointer; 
+        font-size: 24px; 
+        border: none; 
+        background: transparent; 
+        color: #888; 
+    }
+
+    .modal-title { 
+        font-size: 21px; 
+        font-weight: bold; 
+        margin-top: 0; 
+        margin-bottom: 15px; 
+        color: var(--primary-blue); 
+        border-bottom: 2px solid #eee; 
+        padding-bottom: 10px; 
+        text-align: left; 
+    }
+
+    .modal-section { 
+        margin-bottom: 20px; 
+        font-size: 15px; 
+        line-height: 1.6; 
+        text-align: left; 
+    }
+
+    .modal-section h3 { 
+        font-size: 17px; 
+        margin: 0 0 8px 0; 
+        color: #333; 
+        display: flex; 
+        align-items: center; 
+        font-weight: bold; 
+    }
+
     .modal-section ul { margin: 0; padding-left: 22px; color: #555; }
     .modal-section li { margin-bottom: 6px; }
-    .version-tag { display: inline-block; background: #e8eaed; padding: 3px 10px; border-radius: 12px; font-size: 13px; color: #555; margin-left: 10px; vertical-align: middle; font-weight: normal; }
-    .dict-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
-    @media screen and (max-width: 500px) { .dict-grid { grid-template-columns: 1fr; } }
-    .dict-grid button { padding: 15px; font-size: 18px; border: 2px solid var(--primary-blue); border-radius: 8px; background: #fff; color: var(--primary-blue); cursor: pointer; font-weight: bold; transition: 0.2s; }
-    .dict-grid button:hover { background: var(--primary-blue); color: #fff; }
-    .phrase-list { display: flex; flex-direction: column; gap: 8px; text-align: left; padding-right: 5px; }
-    .phrase-item { background: #f8f9fa; border: 1px solid #ddd; padding: 12px 15px; border-radius: 6px; cursor: pointer; font-size: 16px; transition: all 0.2s; position: relative; }
-    .phrase-item:hover { background: #e8f0fe; border-color: var(--primary-blue); color: var(--primary-blue); padding-left: 20px; }
-    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 30px; z-index: 5000; font-size: 16px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); pointer-events: none; }
+
+    .version-tag { 
+        display: inline-block; 
+        background: #e8eaed; 
+        padding: 3px 10px; 
+        border-radius: 12px; 
+        font-size: 13px; 
+        color: #555; 
+        margin-left: 10px; 
+        vertical-align: middle; 
+        font-weight: normal; 
+    }
+
+    .dict-grid { 
+        display: grid; 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 15px; 
+        margin-top: 20px; 
+    }
+
+    @media screen and (max-width: 500px) { 
+        .dict-grid { grid-template-columns: 1fr; } 
+    }
+
+    .dict-grid button { 
+        padding: 15px; 
+        font-size: 18px; 
+        border: 2px solid var(--primary-blue); 
+        border-radius: 8px; 
+        background: #fff; 
+        color: var(--primary-blue); 
+        cursor: pointer; 
+        font-weight: bold; 
+        transition: 0.2s; 
+    }
+
+    .dict-grid button:hover { 
+        background: var(--primary-blue); 
+        color: #fff; 
+    }
+
+    .phrase-list { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 8px; 
+        text-align: left; 
+        padding-right: 5px; 
+    }
+
+    .phrase-item { 
+        background: #f8f9fa; 
+        border: 1px solid #ddd; 
+        padding: 12px 15px; 
+        border-radius: 6px; 
+        cursor: pointer; 
+        font-size: 16px; 
+        transition: all 0.2s; 
+        position: relative; 
+    }
+
+    .phrase-item:hover { 
+        background: #e8f0fe; 
+        border-color: var(--primary-blue); 
+        color: var(--primary-blue); 
+        padding-left: 20px; 
+    }
+
+    .toast { 
+        position: fixed; 
+        bottom: 30px; 
+        left: 50%; 
+        transform: translateX(-50%); 
+        background: rgba(0,0,0,0.8); 
+        color: white; 
+        padding: 12px 24px; 
+        border-radius: 30px; 
+        z-index: 5000; 
+        font-size: 16px; 
+        display: none; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+        pointer-events: none; 
+    }
 </style>
 </head>
 <body>
@@ -221,11 +916,11 @@
             <span style="margin-right: 4px;">目前座號:</span>
             <input type="number" id="ctrlSeat" class="seat-input" value="1" min="1" max="99">
         </div>
-        
+
         <button class="btn btn-clear btn-third" onclick="clearForm()">🧹 清除畫面</button>
         <button class="btn btn-save btn-third" onclick="cloudSave()">☁️ 存檔至雲</button>
         <button class="btn btn-load btn-third" onclick="cloudLoad()">📥 載入資料</button>
-        
+
         <button class="btn btn-print btn-third" onclick="printToPDF()">🖨️ 轉存 PDF</button>
         <button class="btn btn-dict btn-third" onclick="openDictModal()">💡 重點能力</button>
         <button class="btn btn-info btn-third" onclick="showInfo()">📖 操作說明</button>
@@ -234,7 +929,7 @@
 
 <div class="a4-page" id="recordForm">
     <h1>遠東幼兒園 <input type="text" class="title-input year" id="year" placeholder=" "> 學年度 第 <input type="text" class="title-input term" id="term" placeholder=" "> 學期 幼兒學習區紀錄</h1>
-    
+
     <div class="header-info">
         <div class="header-col class-col">班級: <select id="className"><option value="大班">大班</option><option value="中班">中班</option><option value="小班" selected>小班</option></select></div>
         <div class="header-col name-col">幼生姓名: <input type="text" class="name" id="studentName"></div>
@@ -254,7 +949,7 @@
                 <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">👟</span><input type="checkbox" id="cb5"> 生活自理區</td>
                 <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">🏗️</span><input type="checkbox" id="cb6"> 組合建構區</td>
             </tr>
-            
+
             <tr>
                 <td colspan="3" class="photo-wrapper-td" style="padding: 0;">
                     <div class="photo-cell">
@@ -285,7 +980,7 @@
                     </div>
                 </td>
             </tr>
-     
+
             <tr>
                 <td colspan="3" class="photo-wrapper-td" style="padding: 0;">
                     <div class="photo-cell">
@@ -317,7 +1012,7 @@
                 </td>
             </tr>
         </table>
-        
+
         <div class="footer-container">
             <div>班級導師: <input type="text" id="teacherName"></div>
             <div class="footer-note">《請於隔週一交回存檔，期末發回，謝謝！》</div>
@@ -329,7 +1024,7 @@
     <div class="modal-content" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeInfo()">✖</button>
         <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：發行版</span></h2>
-        
+
         <div class="modal-section">
             <h3>⚠️ Google 第一次登入常見問題處理</h3>
             <ul>
@@ -382,6 +1077,6 @@
     </div>
 </div>
 
-<script src="app.js?v=21" defer></script>
+<script src="app.js?v=22" defer></script>
 </body>
 </html>
