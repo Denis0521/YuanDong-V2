@@ -544,8 +544,10 @@
 
         .footer-container { 
             display: flex; 
-            flex-direction: column; 
-            align-items: flex-start; 
+            flex-direction: row; 
+            flex-wrap: wrap; 
+            justify-content: space-between; 
+            align-items: center; 
             padding-top: 25px; 
             gap: 15px; 
         }
@@ -553,21 +555,20 @@
         .footer-container div { 
             width: 100%; 
             display: flex; 
-            flex-direction: column; 
-            align-items: flex-start; 
+            flex-direction: row; 
+            align-items: center; 
         }
 
         .footer-container input { 
-            width: 100%; 
+            flex-grow: 1; 
             height: 45px; 
             font-size: 16px; 
             border: 1px solid #ccc !important; 
             border-radius: 6px; 
             text-align: left; 
             padding: 0 12px; 
-            margin-left: 0; 
-            margin-top: 4px; 
-            background: #fff; 
+            margin-left: 10px; 
+            background: #fff;
         }
     }
 
@@ -593,16 +594,16 @@
             margin: 0 auto !important; 
             padding: calc(15mm + 10px) 15mm 15mm 15mm !important; 
             width: 210mm !important; 
-            height: 297mm !important; 
-            box-sizing: border-box !important; 
+            height: 297mm !important;
+            box-sizing: border-box !important;
             overflow: hidden !important; 
             page-break-after: always !important; 
             display: block !important; 
             border-radius: 0 !important; 
-            position: relative !important; 
-            top: auto !important; 
-            left: auto !important; 
-            transform: none !important; 
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            transform: none !important;
         }
 
         .header-info { 
@@ -611,7 +612,7 @@
             flex-wrap: nowrap !important; 
             justify-content: space-between !important; 
             width: 100% !important; 
-            margin-bottom: 6px !important; 
+            margin-bottom: 6px !important;
         }
 
         .header-col { 
@@ -636,9 +637,12 @@
         .class-col select { width: 75px !important; } 
         .name-col input { width: 100px !important; } 
         .seat-col input { width: 45px !important; } 
-        .date-col input { width: 150px !important; text-align: left !important; } 
+        .date-col input { width: 150px !important; text-align: left !important; }
 
-        .title-input { background: transparent !important; border: none !important; }
+        .title-input { 
+            background: transparent !important; 
+            border: none !important; 
+        }
 
         table.main-table { 
             display: table !important; 
@@ -649,7 +653,11 @@
 
         table.main-table tbody { display: table-row-group !important; }
         table.main-table tr { display: table-row !important; flex-wrap: nowrap !important; width: auto !important; }
-        table.main-table td { display: table-cell !important; border: 1px solid var(--border-color) !important; }
+
+        table.main-table td { 
+            display: table-cell !important; 
+            border: 1px solid var(--border-color) !important; 
+        }
 
         .checkbox-cell { 
             width: auto !important; 
@@ -685,19 +693,26 @@
             gap: 0 !important; 
         }
 
-        .tf-row { flex-direction: row !important; align-items: center !important; }
-        .text-label { font-size: 15px !important; color: #000 !important; font-weight: normal !important; margin-bottom: 0 !important; }
+        .tf-row { 
+            flex-direction: row !important; 
+            align-items: center !important; 
+        }
+
+        .text-label { 
+            font-size: 15px !important; 
+            color: #000 !important; 
+            font-weight: normal !important; 
+            margin-bottom: 0 !important; 
+        }
 
         .tf-row input[type="text"] { 
             border: none !important; 
             height: auto !important; 
             font-size: 15px !important; 
             border-radius: 0 !important; 
-            padding: 2px 6px !important; 
-            background: transparent !important; 
-            width: auto !important; 
-            flex-grow: 1 !important; 
             margin-top: 0 !important; 
+            padding: 0 6px !important; 
+            background: transparent !important; 
         }
 
         .top-line { 
@@ -709,17 +724,14 @@
         .footer-container { 
             display: flex !important; 
             flex-direction: row !important; 
-            justify-content: space-between !important; 
             align-items: center !important; 
             padding-top: 8px !important; 
-            gap: 0 !important; 
+            gap: 0 !important;
         }
 
         .footer-container div { 
             width: auto !important; 
-            display: flex !important; 
-            flex-direction: row !important; 
-            align-items: center !important; 
+            display: block !important; 
         }
 
         .footer-container input { 
@@ -727,280 +739,338 @@
             height: auto !important; 
             font-size: 15px !important; 
             border: none !important; 
-            border-radius: 0 !important; 
             text-align: center !important; 
-            padding: 2px 4px !important; 
-            margin-left: 6px !important; 
+            padding: 0 !important; 
             margin-top: 0 !important; 
+            margin-left:0 !important; 
             background: transparent !important; 
         }
+
+        .header-info select { appearance: none; -webkit-appearance: none; }
+        .photo-placeholder { display: none !important; }
     }
 
-    /* 吐司提示 */
-    .toast {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: rgba(0, 0, 0, 0.85);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 25px;
-        font-size: 14px;
-        z-index: 4000;
-        display: none;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        font-family: "Microsoft JhengHei", sans-serif;
+    .modal-overlay { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        right: 0; 
+        bottom: 0; 
+        background: rgba(0,0,0,0.6); 
+        z-index: 4000; 
+        display: none; 
+        justify-content: center; 
+        align-items: center; 
+        padding: 20px; 
     }
 
-    /* 智慧詞庫與照片來源彈出視窗基礎樣式 */
-    .modal-overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.6);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 2000;
-        padding: 15px;
+    .modal-content { 
+        background: #fff; 
+        width: 100%; 
+        max-width: 600px; 
+        border-radius: 8px; 
+        padding: 25px; 
+        max-height: 85vh; 
+        overflow-y: auto; 
+        position: relative; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        font-family: "Microsoft JhengHei", sans-serif; 
     }
-    .modal-content {
-        background: white;
-        width: 100%;
-        max-width: 600px;
-        border-radius: 12px;
-        padding: 20px;
-        position: relative;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        font-family: "Microsoft JhengHei", sans-serif;
-        max-height: 85vh;
-        display: flex;
-        flex-direction: column;
+
+    .modal-close { 
+        position: absolute; 
+        top: 15px; 
+        right: 15px; 
+        cursor: pointer; 
+        font-size: 24px; 
+        border: none; 
+        background: transparent; 
+        color: #888; 
     }
-    .modal-close {
-        position: absolute;
-        top: 12px; right: 15px;
-        background: none; border: none;
-        font-size: 20px; cursor: pointer; color: #999;
+
+    .modal-title { 
+        font-size: 21px; 
+        font-weight: bold; 
+        margin-top: 0; 
+        margin-bottom: 15px; 
+        color: var(--primary-blue); 
+        border-bottom: 2px solid #eee; 
+        padding-bottom: 10px; 
+        text-align: left; 
     }
-    .modal-close:hover { color: #333; }
-    .modal-title {
-        font-size: 18px; font-weight: bold; margin: 0 0 15px 0; color: #333;
+
+    .modal-section { 
+        margin-bottom: 20px; 
+        font-size: 15px; 
+        line-height: 1.6; 
+        text-align: left; 
     }
-    
-    /* 智慧詞庫專用 */
-    .dict-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        overflow-y: auto;
-        padding-right: 5px;
+
+    .modal-section h3 { 
+        font-size: 17px; 
+        margin: 0 0 8px 0; 
+        color: #333; 
+        display: flex; 
+        align-items: center; 
+        font-weight: bold; 
     }
-    .dict-cat-btn {
-        height: 55px;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-        background: #f8f9fa;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        transition: all 0.2s;
+
+    .modal-section ul { margin: 0; padding-left: 22px; color: #555; }
+    .modal-section li { margin-bottom: 6px; }
+
+    .version-tag { 
+        display: inline-block; 
+        background: #e8eaed; 
+        padding: 3px 10px; 
+        border-radius: 12px; 
+        font-size: 13px; 
+        color: #555; 
+        margin-left: 10px; 
+        vertical-align: middle; 
+        font-weight: normal; 
     }
-    .dict-cat-btn:hover { background: #eef2f7; border-color: var(--primary-blue); color: var(--primary-blue); }
-    .phrase-list {
-        overflow-y: auto;
-        flex-grow: 1;
-        padding-right: 5px;
+
+    .dict-grid { 
+        display: grid; 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 15px; 
+        margin-top: 20px; 
     }
-    .phrase-item {
-        padding: 10px 12px;
-        border-bottom: 1px solid #eee;
-        cursor: pointer;
-        font-size: 15px;
-        line-height: 1.5;
-        transition: background 0.15s;
+
+    @media screen and (max-width: 500px) { 
+        .dict-grid { grid-template-columns: 1fr; } 
     }
-    .phrase-item:hover { background: #f0f7ff; color: var(--primary-blue); }
+
+    .dict-grid button { 
+        padding: 15px; 
+        font-size: 18px; 
+        border: 2px solid var(--primary-blue); 
+        border-radius: 8px; 
+        background: #fff; 
+        color: var(--primary-blue); 
+        cursor: pointer; 
+        font-weight: bold; 
+        transition: 0.2s; 
+    }
+
+    .dict-grid button:hover { 
+        background: var(--primary-blue); 
+        color: #fff; 
+    }
+
+    .phrase-list { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 8px; 
+        text-align: left; 
+        padding-right: 5px; 
+    }
+
+    .phrase-item { 
+        background: #f8f9fa; 
+        border: 1px solid #ddd; 
+        padding: 12px 15px; 
+        border-radius: 6px; 
+        cursor: pointer; 
+        font-size: 16px; 
+        transition: all 0.2s; 
+        position: relative; 
+    }
+
+    .phrase-item:hover { 
+        background: #e8f0fe; 
+        border-color: var(--primary-blue); 
+        color: var(--primary-blue); 
+        padding-left: 20px; 
+    }
+
+    .toast { 
+        position: fixed; 
+        bottom: 30px; 
+        left: 50%; 
+        transform: translateX(-50%); 
+        background: rgba(0,0,0,0.8); 
+        color: white; 
+        padding: 12px 24px; 
+        border-radius: 30px; 
+        z-index: 5000; 
+        font-size: 16px; 
+        display: none; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+        pointer-events: none; 
+    }
 </style>
 </head>
 <body>
 
-<div class="top-bar">
+<div class="toast" id="copyToast">✅ 已成功複製重點能力！</div>
+
+<div class="loader-overlay" id="loader">
+    <div class="spinner"></div>
+    <div id="loaderText">處理中...</div>
+</div>
+
+<div class="top-bar no-print">
     <div class="top-bar-row">
-        <button class="btn btn-auth btn-half" id="loginBtn" onclick="handleAuthClick()">🔵 Google 登入</button>
+        <button id="loginBtn" class="btn btn-auth btn-half" onclick="handleAuthClick()">🔵 Google 登入</button>
         <div class="seat-control btn-half">
-            座號<input type="number" id="ctrlSeat" class="seat-input" min="1" max="50" value="1">
-            <button onclick="cloudLoad()" style="margin-left:8px; background:none; border:none; color:#5df; font-weight:bold; cursor:pointer; font-size:14px;">下載</button>
+            <span style="margin-right: 4px;">目前座號:</span>
+            <input type="number" id="ctrlSeat" class="seat-input" value="1" min="1" max="99">
         </div>
-        <button class="btn btn-save btn-third" onclick="cloudSave()">💾 儲存雲端</button>
-        <button class="btn btn-print btn-third" onclick="printToPDF()">🖨️ 輸出 PDF</button>
-        <button class="btn btn-dict btn-third" onclick="openDictModal()">💡 智慧詞庫</button>
-        <button class="btn btn-clear btn-half" onclick="clearForm()">🗑️ 清除畫面</button>
-        <button class="btn btn-info btn-half" onclick="showInfo()">ℹ️ 使用說明</button>
+
+        <button class="btn btn-clear btn-third" onclick="clearForm()">🧹 清除畫面</button>
+        <button class="btn btn-save btn-third" onclick="cloudSave()">☁️ 存檔至雲</button>
+        <button class="btn btn-load btn-third" onclick="cloudLoad()">📥 載入資料</button>
+
+        <button class="btn btn-print btn-third" onclick="printToPDF()">🖨️ 轉存 PDF</button>
+        <button class="btn btn-dict btn-third" onclick="openDictModal()">💡 重點能力</button>
+        <button class="btn btn-info btn-third" onclick="showInfo()">📖 操作說明</button>
     </div>
 </div>
 
-<div class="a4-page" id="printArea">
-    <h1>
-        <input type="text" id="year" class="title-input year" value="113"> 學年度第 
-        <input type="text" id="term" class="title-input term" value="1"> 學期 幼兒學習區紀錄表
-    </h1>
+<div class="a4-page" id="recordForm">
+    <h1>遠東幼兒園 <input type="text" class="title-input year" id="year" placeholder=" "> 學年度 第 <input type="text" class="title-input term" id="term" placeholder=" "> 學期 幼兒學習區紀錄</h1>
 
     <div class="header-info">
-        <div class="header-col class-col">
-            <span>班級：</span>
-            <select id="className">
-                <option value="寶貝班">寶貝班</option>
-                <option value="幼幼班">幼幼班</option>
-                <option value="小班">小班</option>
-                <option value="中班">中班</option>
-                <option value="大班">大班</option>
-            </select>
-        </div>
-        <div class="header-col name-col">
-            <span>姓名：</span>
-            <input type="text" id="studentName" placeholder="請輸入">
-        </div>
-        <div class="header-col seat-col">
-            <span>座號：</span>
-            <input type="text" id="seatNumber" readonly value="1">
-        </div>
-        <div class="header-col date-col">
-            <span>紀錄日期：</span>
-            <input type="text" id="recordDate" placeholder="點擊選擇日期" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
-        </div>
+        <div class="header-col class-col">班級: <select id="className"><option value="大班">大班</option><option value="中班">中班</option><option value="小班" selected>小班</option></select></div>
+        <div class="header-col name-col">幼生姓名: <input type="text" class="name" id="studentName"></div>
+        <div class="header-col seat-col">座號: <input type="text" class="seat" id="seatNumber" readonly></div>
+        <div class="header-col date-col">紀錄日期: <input type="text" class="date" id="recordDate" placeholder=" "></div>
     </div>
 
     <div class="table-wrapper">
         <table class="main-table">
-            <tbody>
-                <tr>
-                    <td class="checkbox-cell"><label><input type="checkbox" id="cb1"><span class="checkbox-icon">🎨</span>美勞展現</label></td>
-                    <td class="checkbox-cell"><label><input type="checkbox" id="cb2"><span class="checkbox-icon">🗣️</span>語文溝通</label></td>
-                    <td class="checkbox-cell"><label><input type="checkbox" id="cb3"><span class="checkbox-icon">🧩</span>益智探究</label></td>
-                </tr>
-                <tr>
-                    <td class="checkbox-cell"><label><input type="checkbox" id="cb4"><span class="checkbox-icon">🧱</span>積木建構</label></td>
-                    <td class="checkbox-cell"><label><input type="checkbox" id="cb5"><span class="checkbox-icon">🎭</span>裝扮扮演</label></td>
-                    <td class="checkbox-cell"><label><input type="checkbox" id="cb6"><span class="checkbox-icon">🏃‍♂️</span>體能動作</label></td>
-                </tr>
+            <tr>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">✂️</span><input type="checkbox" id="cb1"> 美勞區</td>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">📚</span><input type="checkbox" id="cb2"> 語文區</td>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">🧱</span><input type="checkbox" id="cb3"> 積木區</td>
+            </tr>
+            <tr>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">🧩</span><input type="checkbox" id="cb4"> 益智區</td>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">👟</span><input type="checkbox" id="cb5"> 生活自理區</td>
+                <td colspan="2" class="checkbox-cell"><span class="checkbox-icon">🏗️</span><input type="checkbox" id="cb6"> 組合建構區</td>
+            </tr>
 
-                <tr>
-                    <td colspan="1" class="photo-wrapper-td">
-                        <div class="photo-cell">
-                            <div class="photo-area" onclick="openPhotoSourceModal(1)">
-                                <span class="photo-placeholder" id="ph1">輕觸上傳相片 (區1)</span>
-                                <img id="img1" alt="區1照片">
-                                <button class="delete-btn" id="del1" onclick="removeImage(1, event)">✖</button>
-                            </div>
-                            <div class="text-area">
-                                <div class="tf-row"><span class="text-label">學習區：</span><input type="text" id="pd1" placeholder="例如：美勞區"></div>
-                                <div class="tf-row top-line"><span class="text-label">行為描述：</span><input type="text" id="pdesc1" placeholder="幼兒行為表現點"></div>
-                                <div class="tf-row top-line"><span class="text-label">能力指標：</span><input type="text" id="pab1" placeholder="對應學習指標描述"></div>
-                            </div>
+            <tr>
+                <td colspan="3" class="photo-wrapper-td" style="padding: 0;">
+                    <div class="photo-cell">
+                        <div class="photo-area" onclick="openPhotoSourceModal(1)"><img id="img1"><div class="photo-placeholder" id="ph1">輕觸上傳相片 (區1)</div></div>
+                        <button class="delete-btn no-print" id="del1" onclick="removeImage(1, event)" title="刪除">✖</button>
+                        <input type="file" id="file1" style="display:none;" accept="image/*" onchange="processImage(event, 1)">
+                        <div class="text-area">
+                            <div class="tf-row inline-mobile"><span class="text-label">▶紀錄日期：</span><input type="text" id="pd1"></div>
+                            <div class="tf-row"><span class="text-label">▶照片說明：</span></div>
+                            <div class="tf-row"><input type="text" id="pdesc1"></div>
+                            <div class="tf-row top-line"><span class="text-label">★重點能力：</span></div>
+                            <div class="tf-row"><input type="text" id="pab1"></div>
                         </div>
-                    </td>
-                    <td colspan="2" class="photo-wrapper-td">
-                        <div class="photo-cell">
-                            <div class="photo-area" onclick="openPhotoSourceModal(2)">
-                                <span class="photo-placeholder" id="ph2">輕觸上傳相片 (區2)</span>
-                                <img id="img2" alt="區2照片">
-                                <button class="delete-btn" id="del2" onclick="removeImage(2, event)">✖</button>
-                            </div>
-                            <div class="text-area">
-                                <div class="tf-row"><span class="text-label">學習區：</span><input type="text" id="pd2" placeholder="例如：積木區"></div>
-                                <div class="tf-row top-line"><span class="text-label">行為描述：</span><input type="text" id="pdesc2" placeholder="幼兒行為表現點"></div>
-                                <div class="tf-row top-line"><span class="text-label">能力指標：</span><input type="text" id="pab2" placeholder="對應學習指標描述"></div>
-                            </div>
+                    </div>
+                </td>
+                <td colspan="3" class="photo-wrapper-td" style="padding: 0;">
+                    <div class="photo-cell">
+                        <div class="photo-area" onclick="openPhotoSourceModal(2)"><img id="img2"><div class="photo-placeholder" id="ph2">輕觸上傳相片 (區2)</div></div>
+                        <button class="delete-btn no-print" id="del2" onclick="removeImage(2, event)" title="刪除">✖</button>
+                        <input type="file" id="file2" style="display:none;" accept="image/*" onchange="processImage(event, 2)">
+                        <div class="text-area">
+                            <div class="tf-row inline-mobile"><span class="text-label">▶紀錄日期：</span><input type="text" id="pd2"></div>
+                            <div class="tf-row"><span class="text-label">▶照片說明：</span></div>
+                            <div class="tf-row"><input type="text" id="pdesc2"></div>
+                            <div class="tf-row top-line"><span class="text-label">★重點能力：</span></div>
+                            <div class="tf-row"><input type="text" id="pab2"></div>
                         </div>
-                    </td>
-                </tr>
+                    </div>
+                </td>
+            </tr>
 
-                <tr>
-                    <td colspan="2" class="photo-wrapper-td">
-                        <div class="photo-cell">
-                            <div class="photo-area" onclick="openPhotoSourceModal(3)">
-                                <span class="photo-placeholder" id="ph3">輕觸上傳相片 (區3)</span>
-                                <img id="img3" alt="區3照片">
-                                <button class="delete-btn" id="del3" onclick="removeImage(3, event)">✖</button>
-                            </div>
-                            <div class="text-area">
-                                <div class="tf-row"><span class="text-label">學習區：</span><input type="text" id="pd3" placeholder="例如：益智區"></div>
-                                <div class="tf-row top-line"><span class="text-label">行為描述：</span><input type="text" id="pdesc3" placeholder="幼兒行為表現點"></div>
-                                <div class="tf-row top-line"><span class="text-label">能力指標：</span><input type="text" id="pab3" placeholder="對應學習指標描述"></div>
-                            </div>
+            <tr>
+                <td colspan="3" class="photo-wrapper-td" style="padding: 0;">
+                    <div class="photo-cell">
+                        <div class="photo-area" onclick="openPhotoSourceModal(3)"><img id="img3"><div class="photo-placeholder" id="ph3">輕觸上傳相片 (區3)</div></div>
+                        <button class="delete-btn no-print" id="del3" onclick="removeImage(3, event)" title="刪除">✖</button>
+                        <input type="file" id="file3" style="display:none;" accept="image/*" onchange="processImage(event, 3)">
+                        <div class="text-area">
+                            <div class="tf-row inline-mobile"><span class="text-label">▶紀錄日期：</span><input type="text" id="pd3"></div>
+                            <div class="tf-row"><span class="text-label">▶照片說明：</span></div>
+                            <div class="tf-row"><input type="text" id="pdesc3"></div>
+                            <div class="tf-row top-line"><span class="text-label">★重點能力：</span></div>
+                            <div class="tf-row"><input type="text" id="pab3"></div>
                         </div>
-                    </td>
-                    <td colspan="1" class="photo-wrapper-td">
-                        <div class="photo-cell">
-                            <div class="photo-area" onclick="openPhotoSourceModal(4)">
-                                <span class="photo-placeholder" id="ph4">輕觸上傳相片 (區4)</span>
-                                <img id="img4" alt="區4照片">
-                                <button class="delete-btn" id="del4" onclick="removeImage(4, event)">✖</button>
-                            </div>
-                            <div class="text-area">
-                                <div class="tf-row"><span class="text-label">學習區：</span><input type="text" id="pd4" placeholder="例如：語文區"></div>
-                                <div class="tf-row top-line"><span class="text-label">行為描述：</span><input type="text" id="pdesc4" placeholder="幼兒行為表現點"></div>
-                                <div class="tf-row top-line"><span class="text-label">能力指標：</span><input type="text" id="pab4" placeholder="對應學習指標描述"></div>
-                            </div>
+                    </div>
+                </td>
+                <td colspan="3" class="photo-wrapper-td" style="padding: 0;">
+                    <div class="photo-cell">
+                        <div class="photo-area" onclick="openPhotoSourceModal(4)"><img id="img4"><div class="photo-placeholder" id="ph4">輕觸上傳相片 (區4)</div></div>
+                        <button class="delete-btn no-print" id="del4" onclick="removeImage(4, event)" title="刪除">✖</button>
+                        <input type="file" id="file4" style="display:none;" accept="image/*" onchange="processImage(event, 4)">
+                        <div class="text-area">
+                            <div class="tf-row inline-mobile"><span class="text-label">▶紀錄日期：</span><input type="text" id="pd4"></div>
+                            <div class="tf-row"><span class="text-label">▶照片說明：</span></div>
+                            <div class="tf-row"><input type="text" id="pdesc4"></div>
+                            <div class="tf-row top-line"><span class="text-label">★重點能力：</span></div>
+                            <div class="tf-row"><input type="text" id="pab4"></div>
                         </div>
-                    </td>
-                </tr>
-            </tbody>
+                    </div>
+                </td>
+            </tr>
         </table>
-    </div>
 
-    <div class="footer-container">
-        <span class="footer-note">※ 本表單請妥善保存，作為幼兒發展評量之重要依據。</span>
-        <div>
-            <span>紀錄教師簽名：</span>
-            <input type="text" id="teacherName" placeholder="請簽名">
+        <div class="footer-container">
+            <div>班級導師: <input type="text" id="teacherName"></div>
+            <div class="footer-note">《請於隔週一交回存檔，期末發回，謝謝！》</div>
         </div>
     </div>
 </div>
 
-<input type="file" id="file1" accept="image/*" style="display:none;" onchange="processImage(event, 1)">
-<input type="file" id="file2" accept="image/*" style="display:none;" onchange="processImage(event, 2)">
-<input type="file" id="file3" accept="image/*" style="display:none;" onchange="processImage(event, 3)">
-<input type="file" id="file4" accept="image/*" style="display:none;" onchange="processImage(event, 4)">
+<div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeInfo()">✖</button>
+        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：發行版</span></h2>
 
-<div class="modal-overlay" id="photoSourceModal" onclick="closePhotoSourceModal()">
-    <div class="modal-content" onclick="event.stopPropagation()" style="text-align: center; max-width: 350px;">
-        <button class="modal-close" onclick="closePhotoSourceModal()">✖</button>
-        <h2 class="modal-title" style="text-align: center;">📸 選擇相片來源</h2>
-        <p style="color: #555; margin-bottom: 20px;">請選擇您要上傳相片的方式：</p>
-        <div style="display: flex; gap: 15px; justify-content: center;">
-            <button class="btn btn-auth" style="height: 45px; width: 110px; border-radius: 8px;" onclick="selectPhotoSource('album')">🖼️ 手機相簿</button>
-            <button class="btn btn-save" style="height: 45px; width: 110px; border-radius: 8px;" onclick="selectPhotoSource('camera')">📷 直接拍照</button>
+        <div class="modal-section">
+            <h3>⚠️ Google 第一次登入常見問題處理</h3>
+            <ul>
+                <li><strong>彈出視窗遭到封鎖：</strong>第一次點擊登入時，瀏覽器可能會阻擋 Google 登入驗證視窗。請注意網址列右側，設定「永遠允許」本網站顯示彈出式視窗。</li>
+                <li><strong>出現「Google 尚未驗證這個應用程式」：</strong>因本系統為內部專屬私有工具，尚未提交 Google 官方公開發布審核。若出現此安全警告，請點擊左下角微小的<strong>「進階」</strong>連結 ➜ 再點擊<strong>「前往該網站 (不安全)」</strong>即可繼續授權。</li>
+                <li><strong>權限未完整勾選：</strong>驗證授權時，請務必勾選「Google 雲端硬碟 (Drive)」及「Google 試算表 (Sheets)」的存取與權限，否則系統將無法為您順利建立資料庫、存檔或讀取相片。</li>
+            </ul>
+        </div>
+        <div class="modal-section">
+            <h3>📱 如何安裝至手機桌面 (免下載APP)</h3>
+            <ul>
+                <li><strong>蘋果 iOS (Safari)：</strong>點擊瀏覽器下方導覽列的「分享」圖示，選擇「加入主畫面」。</li>
+                <li><strong>安卓 Android (Chrome)：</strong>點擊右上角「三個點」選單，選擇「安裝應用程式」。</li>
+            </ul>
+        </div>
+        <div class="modal-section">
+            <h3>📝 基本操作與重點能力</h3>
+            <ul>
+                <li><strong>載入與儲存：</strong>輸入座號後點擊「📥 載入」可讀取舊資料，完成編輯後點擊「☁️ 存檔」即可同步至雲端。</li>
+                <li><strong>重點能力詞庫：</strong>點擊「💡 重點能力」按鈕，可快速瀏覽各區專屬評語，點擊句子即可自動複製。</li>
+            </ul>
         </div>
     </div>
 </div>
 
 <div class="modal-overlay" id="dictModal" onclick="closeDictModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <button class="modal-close" onclick="closeDictModal()">✖</button>
-        
-        <div id="dictHomeLayer">
-            <h2 class="modal-title">💡 智慧幼兒觀察評語詞庫</h2>
-            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">請選擇您想參考的學習區分類：</p>
+        <div id="dictView1">
+            <button class="modal-close" onclick="closeDictModal()">✖</button>
+            <h2 class="modal-title">💡 挑選重點能力區塊</h2>
+            <p style="color: #666; font-size: 15px; margin-bottom: 0;">請點擊下方區塊，查看專屬的評語詞庫：</p>
             <div class="dict-grid">
-                <button class="dict-cat-btn" onclick="switchDictLayer('語文區')">🗣️ 語文區</button>
-                <button class="dict-cat-btn" onclick="switchDictLayer('美勞區')">🎨 美勞區</button>
-                <button class="dict-cat-btn" onclick="switchDictLayer('益智區')">🧩 益智區</button>
-                <button class="dict-cat-btn" onclick="switchDictLayer('積木區')">🧱 積木區</button>
-                <button class="dict-cat-btn" onclick="switchDictLayer('裝扮區')">🎭 裝扮區</button>
-                <button class="dict-cat-btn" onclick="switchDictLayer('體能區')">🏃‍♂️ 體能區</button>
+                <button onclick="showCategoryDict('美勞區')">✂️ 美勞區</button>
+                <button onclick="showCategoryDict('語文區')">📚 語文區</button>
+                <button onclick="showCategoryDict('積木區')">🧱 積木區</button>
+                <button onclick="showCategoryDict('益智區')">🧩 益智區</button>
+                <button onclick="showCategoryDict('生活自理區')">👟 生活自理區</button>
+                <button onclick="showCategoryDict('組合建構區')">🏗️ 組合建構區</button>
             </div>
         </div>
-
-        <div id="dictListLayer" style="display: none; flex-direction: column; flex-grow: 1; overflow: hidden;">
+        <div id="dictView2" style="display: none;">
+            <button class="modal-close" onclick="closeDictModal()">✖</button>
             <h2 class="modal-title" style="display: flex; align-items: center;">
                 <button onclick="backToDictHome()" style="margin-right: 15px; font-size: 15px; cursor: pointer; border: 1px solid #ccc; padding: 4px 10px; border-radius: 4px; background: #f0f0f0;">⬅ 返回</button>
-                <span id="dictCategoryTitle">分類名</span>
+                <span id="dictCategoryTitle">美勞區</span>
             </h2>
             <p style="color: #ea4335; font-size: 14px; margin-bottom: 15px; font-weight: bold;">※ 點擊下方句子即可自動複製，並可直接貼上至表格中！</p>
             <div class="phrase-list" id="phraseListContainer"></div>
@@ -1008,26 +1078,18 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="infoModal" onclick="closeInfo()">
-    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 450px;">
-        <button class="modal-close" onclick="closeInfo()">✖</button>
-        <h2 class="modal-title">ℹ️ 系統使用指南</h2>
-        <div style="overflow-y: auto; font-size: 15px; line-height: 1.6; color: #333;">
-            <p><strong>1. Google 帳號授權：</strong>第一次使用請點擊「Google 登入」。連線後系統會自動在您的雲端硬碟建立資料庫表格與相片庫資料夾。</p>
-            <p><strong>2. 學生檔案下載：</strong>在上方選擇或輸入「座號」，點擊「下載」即可秒速載入該生的文字與相片。</p>
-            <p><strong>3. 智慧詞庫複製：</strong>點擊「智慧詞庫」選擇區域，點擊需要的評語句子後系統會<strong>自動複製</strong>，直接在輸入框內「貼上」即可。</p>
-            <p><strong>4. 自動防錯備份：</strong>點擊「儲存雲端」，資料會以座號覆蓋更新。照片檔名自動包含班級姓名，不用擔心相互蓋檔。</p>
-            <p><strong>5. A4 完美列印：</strong>點擊「輸出 PDF」，系統會隱藏控制列，並精確調整版面以符合 A4 尺寸。建議在列印設定中將<strong>「背景圖形」打勾</strong>以取得最佳效果。</p>
+<div class="modal-overlay" id="photoSourceModal" onclick="closePhotoSourceModal()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="text-align: center; max-width: 350px;">
+        <button class="modal-close" onclick="closePhotoSourceModal()">✖</button>
+        <h2 class="modal-title" style="text-align: center;">📸 選擇相片來源</h2>
+        <p style="color: #555; margin-bottom: 20px;">請選擇您要上傳相片的方式：</p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button class="btn btn-auth" style="height: 45px; font-size: 16px; border-radius: 8px;" onclick="selectPhotoSource('gallery')">🖼️ 一般上傳</button>
+            <button class="btn btn-save" style="height: 45px; font-size: 16px; border-radius: 8px;" onclick="selectPhotoSource('camera')">📷 開啟相機</button>
         </div>
     </div>
 </div>
 
-<div class="loader-overlay" id="loader">
-    <div class="spinner"></div>
-    <div id="loaderText">讀取中...</div>
-</div>
-<div class="toast" id="copyToast">📋 已成功複製該段評語描述！</div>
-
-<script src="app.js"></script>
+<script src="app.js?v=23" defer></script>
 </body>
 </html>
