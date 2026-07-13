@@ -17,7 +17,7 @@
 
 <style>
     /* ==================================================== */
-    /* 0. CSS 變數宣告 (優化顏色匹配截圖)                      */
+    /* 0. CSS 變數宣告 (顏色匹配您的截圖)                      */
     /* ==================================================== */
     :root {
         --primary-blue: #1a73e8;
@@ -26,11 +26,12 @@
     }
 
     /* ==================================================== */
-    /* 1. 電腦版與預設版面 (A4 完美比例)                    */
+    /* 1. 全局與電腦版預設版面 (A4 完美比例)                   */
     /* ==================================================== */
-    body { background-color: var(--bg-gray); font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; padding-top: 145px; display: flex; justify-content: center; }
+    body { background-color: var(--bg-gray); font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; padding-top: 140px; display: flex; justify-content: center; }
     
-    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #353745; color: white; padding: 10px; display: flex; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    /* 🔥 徹底刪除 box-shadow 陰影，解決灰色帶問題 🔥 */
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #353745; color: white; padding: 10px; display: flex; justify-content: center; z-index: 1000; border-bottom: 1px solid #222; }
     
     .top-bar-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; width: 100%; max-width: 700px; margin: 0 auto; }
     
@@ -69,17 +70,11 @@
     .header-col input, .header-col select { font-size: 16px; font-family: inherit; border: none; outline: none; background: rgba(0,0,0,0.05); border-radius: 4px; padding: 4px 6px; margin-left: 6px; text-align: center; color: #000; }
     .class-col select { width: 75px; } .name-col input { width: 100px; } .seat-col input { width: 45px; } .date-col input { width: 150px; text-align: left; padding-left: 8px;} 
 
+    /* 🔥 100% 退回原始設定，保證底層架構與 PDF 一致 🔥 */
     .table-wrapper { width: 100%; }
-    
-    /* 🔥 移除表格外框線 🔥 */
-    table.main-table { width: 100%; border-collapse: collapse; border: none; table-layout: fixed; }
-    /* 🔥 預設所有儲存格無框線 🔥 */
-    table.main-table td { border: none; padding: 0; vertical-align: top; } 
-    /* 🔥 單獨把框線加回照片區塊上 🔥 */
-    td.photo-wrapper-td { border: 1px solid var(--border-color); }
-    
-    /* 🔥 確保學習區勾選欄位無框線 🔥 */
-    .checkbox-cell { padding: 4px 10px !important; text-align: left; font-size: 16px; vertical-align: middle !important; height: 38px; border: none !important; }
+    table.main-table { width: 100%; border-collapse: collapse; border: 1px solid var(--border-color); table-layout: fixed; }
+    table.main-table td { border: 1px solid var(--border-color); padding: 0; vertical-align: top; } 
+    .checkbox-cell { padding: 4px 10px !important; text-align: left; font-size: 16px; vertical-align: middle !important; height: 38px; }
     .checkbox-cell input[type="checkbox"] { transform: scale(1.2); margin-right: 4px; vertical-align: middle; cursor: pointer; }
     .checkbox-icon { font-size: 16px; margin-right: 3px; vertical-align: middle; }
 
@@ -105,11 +100,22 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     /* ==================================================== */
-    /* 2. 手機螢幕友善介面                                    */
+    /* 2. 螢幕觀看專屬設定 (隱藏格線，僅限螢幕觀看生效)           */
+    /* ==================================================== */
+    @media screen {
+        table.main-table, table.main-table td { border: none !important; }
+        .checkbox-cell { border: none !important; }
+        td.photo-wrapper-td { border: 1px solid var(--border-color) !important; }
+    }
+
+    /* ==================================================== */
+    /* 3. 手機版友善介面                                      */
     /* ==================================================== */
     @media screen and (max-width: 800px) {
-        body { padding-top: 145px; background-color: #f0f2f5; }
-        .a4-page { width: 100%; height: auto; box-shadow: none; padding: 15px; margin-bottom: 0; border-radius: 0; margin-top: 10px; }
+        /* 🔥 完全刪除間距與底色，與導覽列完美貼合無灰色帶 🔥 */
+        body { padding-top: 130px; background-color: #fff; }
+        .a4-page { width: 100%; height: auto; box-shadow: none; padding: 15px; margin-top: 0; margin-bottom: 0; border-radius: 0; }
+        
         h1 { font-size: 20px; line-height: 1.5; margin-bottom: 15px; }
         .title-input { background: #fff; border: 1px solid #ccc !important; }
         .header-info { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 15px; }
@@ -117,10 +123,9 @@
         .class-col { width: calc(40% - 6px); } .name-col { width: calc(60% - 6px); } .seat-col { width: calc(32% - 6px); } .date-col { width: calc(68% - 6px); }
         .header-col input, .header-col select { flex-grow: 1; width: 100%; height: 42px; border: 1px solid #ccc !important; background: #fff; text-align: left; padding: 0 10px; font-size: 16px;}
         
-        table.main-table { display: flex; flex-wrap: wrap; width: 100%; border: none; }
+        /* 手機版：2列3行排列設定 */
+        table.main-table { display: flex; flex-wrap: wrap; width: 100%; border: none !important; }
         table.main-table tbody, table.main-table tr { display: contents; }
-        
-        /* 🔥 手機版：確保學習區移除底線 🔥 */
         .checkbox-cell { flex: 0 0 50%; max-width: 50%; height: 50px; display: flex; align-items: center; justify-content: flex-start; padding-left: 15px !important; border: none !important; background: #fff; box-sizing: border-box;}
         .checkbox-cell input[type="checkbox"] { transform: scale(1.5); margin-right: 10px; }
         
@@ -141,7 +146,7 @@
     }
 
     /* ==================================================== */
-    /* 3. 列印與 PDF 輸出專用                                 */
+    /* 4. 列印與 PDF 輸出專用 (已 100% 完整退回您最原始的代碼) */
     /* ==================================================== */
     @media print {
         @page { margin: 0; size: A4 portrait; }
@@ -155,15 +160,13 @@
         .class-col select { width: 75px !important; } .name-col input { width: 100px !important; } .seat-col input { width: 45px !important; } .date-col input { width: 150px !important; text-align: left !important; }
         .title-input { background: transparent !important; border: none !important; }
         
-        /* 🔥 PDF列印：移除上方表格外框與勾選區內線 🔥 */
-        table.main-table { display: table !important; width: 100% !important; border-collapse: collapse !important; border: none !important; }
+        /* 🔥 完全保留原汁原味的 PDF 表格框線 🔥 */
+        table.main-table { display: table !important; width: 100% !important; border-collapse: collapse !important; border: 1px solid var(--border-color) !important; }
         table.main-table tbody { display: table-row-group !important; }
         table.main-table tr { display: table-row !important; flex-wrap: nowrap !important; width: auto !important; }
-        table.main-table td { display: table-cell !important; border: none !important; }
-        .checkbox-cell { width: auto !important; height: 38px !important; display: table-cell !important; padding: 4px 10px !important; border: none !important; }
+        table.main-table td { display: table-cell !important; border: 1px solid var(--border-color) !important; }
+        .checkbox-cell { width: auto !important; height: 38px !important; display: table-cell !important; padding: 4px 10px !important; }
         .checkbox-cell input[type="checkbox"] { transform: scale(1.2) !important; }
-        
-        /* 🔥 PDF列印：為下方相片區塊保留框線 🔥 */
         td.photo-wrapper-td { display: table-cell !important; width: 50% !important; margin-top: 0 !important; border: 1px solid var(--border-color) !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important; }
         
         .photo-cell { height: 410px !important; }
@@ -181,7 +184,7 @@
     }
 
     /* ==================================================== */
-    /* 4. 彈出視窗共用樣式 (說明與詞庫)                        */
+    /* 5. 彈出視窗共用樣式 (說明與詞庫)                        */
     /* ==================================================== */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 4000; display: none; justify-content: center; align-items: center; padding: 20px; }
     .modal-content { background: #fff; width: 100%; max-width: 600px; border-radius: 8px; padding: 25px; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-family: "Microsoft JhengHei", sans-serif; }
