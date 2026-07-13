@@ -592,17 +592,20 @@
         .a4-page { 
             box-shadow: none !important; 
             margin: 0 auto !important; 
-            padding: 15mm 15mm 15mm 15mm !important; 
+            /* 將上方 padding 從 15mm 增加 10px，使整體內容往下移動 */
+            padding: calc(15mm + 10px) 15mm 15mm 15mm !important; 
             width: 210mm !important; 
-            height: 267mm !important; 
+            height: 297mm !important; /* 改回標準 A4 完整高度 */
+            box-sizing: border-box !important; /* 確保 padding 不會撐破 A4 尺寸 */
             overflow: hidden !important; 
             page-break-after: always !important; 
             display: block !important; 
             border-radius: 0 !important; 
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
+            /* 移除絕對定位，解決轉換 PDF 時跑版裁切的問題 */
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            transform: none !important;
         }
 
         .header-info { 
