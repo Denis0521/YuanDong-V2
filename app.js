@@ -632,3 +632,36 @@ function printToPDF() {
         window.print();
     }, 500);
 }
+
+// ==================== 相片來源選擇邏輯 ====================
+let currentPhotoIndex = null;
+
+// 打開相片來源視窗
+function openPhotoSourceModal(index) {
+    currentPhotoIndex = index;
+    $('photoSourceModal').style.display = 'flex';
+}
+
+// 關閉相片來源視窗
+function closePhotoSourceModal() {
+    $('photoSourceModal').style.display = 'none';
+    currentPhotoIndex = null;
+}
+
+// 選擇來源並觸發上傳
+function selectPhotoSource(source) {
+    if (!currentPhotoIndex) return;
+    
+    const fileInput = $('file' + currentPhotoIndex);
+    
+    // 如果選擇相機，加上 capture 屬性強制開啟後鏡頭；否則移除該屬性開啟相簿
+    if (source === 'camera') {
+        fileInput.setAttribute('capture', 'environment');
+    } else {
+        fileInput.removeAttribute('capture');
+    }
+    
+    // 關閉視窗並觸發隱藏的檔案上傳輸入框
+    closePhotoSourceModal();
+    fileInput.click();
+}
