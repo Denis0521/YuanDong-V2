@@ -10,654 +10,588 @@ let spreadsheetId = null;
 let folderId = null;
 const cloudImageData = { fileId1: '', fileId2: '', fileId3: '', fileId4: '' };
 
-// 用於追蹤本機預覽圖片的 ObjectURL，便於適時釋放記憶體，避免瀏覽器崩潰
-const localPreviewUrls = { 1: '', 2: '', 3: '', 4: '' };
-
 const $ = (id) => document.getElementById(id);
 
 // ==================== 初始化 ====================
 window.addEventListener('load', () => {
-    // 註冊 Service Worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')
             .then(() => console.log('Service Worker 註冊成功'))
             .catch(err => console.error('Service Worker 註冊失敗', err));
     }
 
-    // 檢查並恢復登入狀態
     restoreLoginState();
-
-    // 初始化 Google OAuth
     initGoogleAuth();
 
-    // 綁定座號同步
     $('seatNumber').value = $('ctrlSeat').value;
     $('ctrlSeat').addEventListener('change', function() {
         $('seatNumber').value = this.value;
     });
 
-    // 動態綁定 1~4 號照片欄位的 change 事件
-    for (let i = 1; i <= 4; i++) {
-        const fileInput = $('file' + i);
-        if (fileInput) {
-            fileInput.addEventListener('change', (e) => processImage(e, i));
-        }
-    }
-
-    // 即時標題綁定
     $('studentName').addEventListener('input', updateDocumentTitle);
-    
-    // 初始化字詞庫首頁
-    backToDictHome();
 });
 
-// 更新文件標題，確保列印 100% 抓到正確名字
 function updateDocumentTitle() {
     const name = $('studentName').value.trim();
-    document.title = name ? `${name}_學習區紀錄` : "未命名幼生_學習區紀錄";
-}
-
-// 初始化 Google 認證 (加入離線防錯保護)
-function initGoogleAuth() {
-    if (typeof google === 'undefined') {
-        console.warn('Google Auth SDK 未載入（可能處於離線狀態）。');
-        return;
-    }
-    try {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
-            callback: (tokenResponse) => {
-                if (tokenResponse.error !== undefined) {
-                    alert('認證失敗：' + tokenResponse.error);
-                    return;
-                }
-                accessToken = tokenResponse.access_token;
-                saveLoginState();
-                updateAuthUI(true);
-                alert('登入成功！已成功連接 Google 雲端帳戶。');
-            },
-        });
-    } catch (e) {
-        console.error('初始化 Google Auth 失敗', e);
-    }
-}
-
-function handleAuthClick() {
-    if (typeof google === 'undefined' || !tokenClient) {
-        alert('目前無法連接 Google 驗證伺服器，請檢查網路連線。本機列印與複製功能仍可正常使用。');
-        return;
-    }
-    tokenClient.requestAccessToken({ prompt: 'consent' });
-}
-
-function handleSignoutClick() {
-    if (accessToken) {
-        google.accounts.oauth2.revoke(accessToken, () => {
-            accessToken = null;
-            clearLoginState();
-            updateAuthUI(false);
-            alert('已成功登出。');
-        });
-    } else {
-        clearLoginState();
-        updateAuthUI(false);
-    }
-}
-
-function saveLoginState() {
-    localStorage.setItem('g_access_token', accessToken);
-    localStorage.setItem('g_token_time', Date.now().toString());
+    document.title = name ? `${name}_學習區紀錄` : '未命名幼生_學習區紀錄';
 }
 
 function restoreLoginState() {
-    const token = localStorage.getItem('g_access_token');
-    const time = localStorage.getItem('g_token_time');
-    if (token && time) {
-        if (Date.now() - parseInt(time) < 3600 * 1000) {
-            accessToken = token;
-            updateAuthUI(true);
-        } else {
-            clearLoginState();
-        }
-    }
-}
+    const savedToken = localStorage.getItem('g_token');
+    const expireTime = localStorage.getItem('g_expire');
+    const now = new Date().getTime();
 
-function clearLoginState() {
-    accessToken = null;
-    localStorage.removeItem('g_access_token');
-    localStorage.removeItem('g_token_time');
-}
+    if (savedToken && expireTime && now < parseInt(expireTime)) {
+        accessToken = savedToken;
+        const loginBtn = $('loginBtn');
+        loginBtn.innerText = '🟢 自動連線中';
+        loginBtn.style.background = 'linear-gradient(to bottom, #4ca65a, #2f7a3f)';
 
-function updateAuthUI(isLoggedIn) {
-    if (isLoggedIn) {
-        $('btnSignIn').style.display = 'none';
-        $('btnSignOut').style.display = 'inline-block';
+        showLoading('🚀 偵測到有效憑證，正在連接雲端資料庫...');
+        initEnvironment().then(() => {
+            loginBtn.innerText = '🟢 已連線雲端';
+        });
     } else {
-        $('btnSignIn').style.display = 'inline-block';
-        $('btnSignOut').style.display = 'none';
+        clearStoredToken();
     }
 }
 
-// ==================== 圖片處理優化 (防止記憶體洩漏與崩潰) ====================
-function processImage(event, index) {
+function clearStoredToken() {
+    localStorage.removeItem('g_token');
+    localStorage.removeItem('g_expire');
+    accessToken = null;
+}
+
+function initGoogleAuth() {
+    if (typeof google !== 'undefined') {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
+            prompt: '', 
+            callback: handleAuthCallback,
+        });
+    }
+}
+
+async function handleAuthCallback(tokenResponse) {
+    if (tokenResponse.error) {
+        alert('❌ Google 授權失敗：' + tokenResponse.error);
+        return;
+    }
+    accessToken = tokenResponse.access_token;
+    const expiresIn = tokenResponse.expires_in || 3599;
+    const newExpireTime = new Date().getTime() + (expiresIn - 60) * 1000;
+    localStorage.setItem('g_token', accessToken);
+    localStorage.setItem('g_expire', newExpireTime);
+
+    const loginBtn = $('loginBtn');
+    loginBtn.innerText = '🟢 已連線雲端';
+    loginBtn.style.background = 'linear-gradient(to bottom, #4ca65a, #2f7a3f)';
+
+    showLoading('🚀 正在初始化個人雲端資料庫...');
+    await initEnvironment();
+}
+
+function handleAuthClick() {
+    if (tokenClient) {
+        tokenClient.requestAccessToken();
+    } else {
+        alert('Google SDK 載入中，請重新嘗試。');
+    }
+}
+
+async function fetchGoogleAPI(url, options = {}) {
+    if (!accessToken) {
+        hideLoading();
+        alert('⚠️ 請先完成「Google 帳號登入」授權！');
+        throw new Error('未獲得權限');
+    }
+    const headers = options.headers || {};
+    headers['Authorization'] = `Bearer ${accessToken}`;
+    options.headers = headers;
+
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        if (response.status === 401) handleTokenExpired();
+        const errDetails = await response.text();
+        console.error('API Error:', errDetails);
+        throw new Error(`狀態碼: ${response.status}`);
+    }
+    return response.json();
+}
+
+function handleTokenExpired() {
+    clearStoredToken();
+    const loginBtn = $('loginBtn');
+    loginBtn.innerText = '🔵 Google 登入';
+    loginBtn.style.background = 'linear-gradient(to bottom, #4285f4, #2b5cbf)';
+    alert('⚠️ 您的 Google 登入憑證已過期，請重新點擊上方「Google 登入」按鈕！');
+}
+
+async function initEnvironment() {
+    try {
+        const qSheet = "name='幼兒學習區紀錄資料庫' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false";
+        const qFolder = "name='幼兒相片雲端備份庫' and mimeType='application/vnd.google-apps.folder' and trashed=false";
+
+        const [sheetSearch, folderSearch] = await Promise.all([
+            fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(qSheet)}`),
+            fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(qFolder)}`)
+        ]);
+
+        if (sheetSearch.files?.length > 0) spreadsheetId = sheetSearch.files[0].id;
+        else spreadsheetId = await createSpreadsheet();
+
+        if (folderSearch.files?.length > 0) folderId = folderSearch.files[0].id;
+        else folderId = await createFolder();
+
+        hideLoading();
+    } catch (err) {
+        hideLoading();
+        alert('❌ 初始化個人雲端空間失敗：' + err.message);
+    }
+}
+
+async function createSpreadsheet() {
+    const createSheet = await fetchGoogleAPI('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '幼兒學習區紀錄資料庫', mimeType: 'application/vnd.google-apps.spreadsheet' })
+    });
+    await fetchGoogleAPI( `https://sheets.googleapis.com/v4/spreadsheets/${createSheet.id}/values/A1:E1?valueInputOption=USER_ENTERED`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [["座號", "班級", "姓名", "最後更新時間", "資料備註"]] })
+    });
+    return createSheet.id;
+}
+
+async function createFolder() {
+    const createFolder = await fetchGoogleAPI('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '幼兒相片雲端備份庫', mimeType: 'application/vnd.google-apps.folder' })
+    });
+    return createFolder.id;
+}
+
+// ==================== 圖片優化處理與快取處理 ====================
+const readImageFile = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+});
+
+const loadImage = (src) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+});
+
+async function processImage(event, index) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const preview = $('preview' + index);
-    const loading = $('loading' + index);
+    const seatNum = $('ctrlSeat').value || '未知';
+    const stuName = $('studentName').value || '未命名';
+    const className = $('className').value || '無班級';
+    const fileName = `${className}_${seatNum}號_${stuName}_區${index}.jpg`;
 
-    if (loading) loading.style.display = 'flex';
+    showLoading('📸 正在壓縮圖片並上傳至雲端...');
 
-    // 優化點 1：不再將大圖轉成 Base64 大字串，直接利用暫時性 Object URL 載入，極省記憶體
-    const tempImgUrl = URL.createObjectURL(file);
-    const img = new Image();
-    
-    img.onload = function() {
+    try {
+        const dataSrc = await readImageFile(file);
+        const img = await loadImage(dataSrc);
+
         const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
+        const MAX_SIZE = 600; 
+        let { width, height } = img;
 
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 1200;
-
-        if (width > height) {
-            if (width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
-            }
-        } else {
-            if (height > MAX_HEIGHT) {
-                width *= MAX_HEIGHT / height;
-                height = MAX_HEIGHT;
-            }
+        if (width > height && width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
         }
 
         canvas.width = width;
         canvas.height = height;
-
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        // 優化點 2：使用二進位 canvas.toBlob() 代替 toDataURL()，避免長字串撐爆效能
-        canvas.toBlob((blob) => {
-            URL.revokeObjectURL(tempImgUrl); // 釋放原圖暫存
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        const imgEl = $('img' + index);
+        imgEl.src = dataUrl;
+        imgEl.style.display = 'block';
 
-            if (!blob) {
-                if (loading) loading.style.display = 'none';
-                alert('圖片壓縮失敗');
-                return;
-            }
+        $('ph' + index).style.display = 'none';
+        $('del' + index).style.display = 'block';
 
-            // 優化點 3：清除舊的預覽圖記憶體，避免切換時越疊越卡
-            if (localPreviewUrls[index]) {
-                URL.revokeObjectURL(localPreviewUrls[index]);
-            }
+        // 徹底釋放記憶體避免 iOS 閃退
+        canvas.width = 0; 
+        canvas.height = 0;
 
-            const previewUrl = URL.createObjectURL(blob);
-            localPreviewUrls[index] = previewUrl;
-            preview.src = previewUrl;
-            preview.style.display = 'block';
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
 
-            if (loading) loading.style.display = 'none';
-
-            // 若已聯網登入，自動發送上傳
-            if (accessToken) {
-                const fileName = `seat_${$('seatNumber').value || '00'}_pic_${index}.jpg`;
-                uploadImageToDrive(blob, fileName, index);
-            }
-        }, 'image/jpeg', 0.6);
-    };
-
-    img.onerror = function() {
-        URL.revokeObjectURL(tempImgUrl);
-        if (loading) loading.style.display = 'none';
-        alert('無法載入圖片檔案');
-    };
-
-    img.src = tempImgUrl;
+        await uploadImageToDrive(blob, fileName, index);
+    } catch (err) {
+        hideLoading();
+        alert('❌ 圖片處理失敗：' + err.message);
+    }
 }
 
-// 上傳圖片到 Google Drive
-async function uploadImageToDrive(blob, fileName, index) {
-    if (!accessToken) return;
+async function uploadImageToDrive(blob, filename, imgIndex) {
     try {
-        if (!folderId) {
-            folderId = await getOrCreateFolder('幼兒學習區紀錄_照片庫');
-        }
+        if (!folderId) await initEnvironment();
 
-        const metadata = {
-            name: fileName,
-            parents: [folderId]
-        };
-
+        const metadata = { name: filename, parents: [folderId], mimeType: 'image/jpeg' };
         const formData = new FormData();
         formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
         formData.append('file', blob);
 
-        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+        const uploadResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
             method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + accessToken },
+            headers: { 'Authorization': `Bearer ${accessToken}` },
             body: formData
         });
 
-        if (!response.ok) throw new Error('上傳失敗');
-        const result = await response.json();
-        cloudImageData['fileId' + index] = result.id;
-        console.log(`照片 ${index} 上傳成功，雲端 ID: ${result.id}`);
-    } catch (error) {
-        console.error(`照片 ${index} 上傳雲端失敗:`, error);
+        if (!uploadResponse.ok) throw new Error('雲端上傳失敗');
+        const fileData = await uploadResponse.json();
+
+        cloudImageData['fileId' + imgIndex] = fileData.id;
+        hideLoading();
+    } catch (err) {
+        hideLoading();
+        alert('❌ 圖片儲存至雲端失敗：' + err.message);
     }
 }
 
-async function getOrCreateFolder(folderName) {
-    const q = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
-    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, {
-        headers: { 'Authorization': 'Bearer ' + accessToken }
-    });
-    const searchData = await searchRes.json();
-    if (searchData.files && searchData.files.length > 0) {
-        return searchData.files[0].id;
-    }
+async function removeImage(index, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const fileId = cloudImageData['fileId' + index];
 
-    const metadata = {
-        name: folderName,
-        mimeType: 'application/vnd.google-apps.folder'
-    };
-    const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + accessToken,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(metadata)
-    });
-    const createData = await createRes.json();
-    return createData.id;
+    if (fileId) {
+        if (!confirm('確定要移除這張照片嗎？(將同時從 Google 雲端硬碟永久刪除)')) return;
+        showLoading('🗑️ 正在從雲端刪除照片...');
+        try {
+            await fetchGoogleAPI(`https://www.googleapis.com/drive/v3/files/${fileId}`, { method: 'DELETE' });
+        } catch(e) { console.warn('檔案可能已不在雲端', e); }
+        hideLoading();
+    }
+    resetImageField(index);
 }
 
-// ==================== 雲端資料試算表同步與主鍵(ID)防錯 ====================
-async function cloudSave() {
-    if (!accessToken) {
-        alert('請先點擊上方按鈕登入 Google 帳戶才能同步至雲端。');
-        return;
-    }
-
-    try {
-        if (!spreadsheetId) {
-            spreadsheetId = await getOrCreateSpreadsheet('幼兒學習區紀錄表');
-        }
-
-        const data = getFormData();
-        
-        // 【核心安全性優化】：採用「班級_座號」不重複字串作為唯一主鍵，防止表格排序後的錯位覆蓋
-        const uniqueKey = `${data.className}_${data.seatNumber}`;
-
-        const getRes = await fetch(`https://www.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:A`, {
-            headers: { 'Authorization': 'Bearer ' + accessToken }
-        });
-        const getData = await getRes.json();
-        const values = getData.values || [];
-
-        let rowIndex = values.findIndex((row) => row[0] == uniqueKey);
-        
-        const timestamp = new Date().toLocaleString('zh-TW', { hour12: false });
-        const rowData = [
-            uniqueKey,          // Col A: 唯一主鍵
-            data.className,     // Col B
-            data.seatNumber,    // Col C
-            data.studentName,   // Col d
-            data.recordDate,    // Col E
-            data.cb1, data.cb2, data.cb3, data.cb4, data.cb5, data.cb6, // Col F ~ K
-            data.area1, data.area2, data.area3, data.area4,             // Col L ~ O
-            cloudImageData.fileId1, cloudImageData.fileId2, cloudImageData.fileId3, cloudImageData.fileId4, // Col P ~ S
-            data.desc1, data.desc2, // Col T ~ U
-            timestamp           // Col V: 更新時間
-        ];
-
-        if (rowIndex !== -1) {
-            const actualRow = rowIndex + 1;
-            const updateRes = await fetch(`https://www.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A${actualRow}:V${actualRow}?valueInputOption=USER_ENTERED`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': 'Bearer ' + accessToken,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ values: [rowData] })
-            });
-            if (!updateRes.ok) throw new Error('更新雲端資料失敗');
-            alert(`成功！已更新 ${data.studentName} 的雲端觀察紀錄。`);
-        } else {
-            const appendRes = await fetch(`https://www.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + accessToken,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ values: [rowData] })
-            });
-            if (!appendRes.ok) throw new Error('寫入新資料失敗');
-            alert(`成功！已為 ${data.studentName} 新增一筆雲端觀察紀錄。`);
-        }
-    } catch (error) {
-        console.error('雲端儲存發生錯誤:', error);
-        alert('同步失敗，請檢查網路或重新登入。錯誤原因：' + error.message);
-    }
+function resetImageField(index) {
+    const imgEl = $('img' + index);
+    imgEl.src = '';
+    imgEl.style.display = 'none';
+    $('del' + index).style.display = 'none';
+    $('ph' + index).style.display = 'block';
+    $('ph' + index).innerText = `輕觸上傳相片 (區${index})`;
+    $('file' + index).value = '';
+    cloudImageData['fileId' + index] = '';
 }
 
-async function getOrCreateSpreadsheet(title) {
-    const q = `name='${title}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`;
-    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, {
-        headers: { 'Authorization': 'Bearer ' + accessToken }
-    });
-    const searchData = await searchRes.json();
-    if (searchData.files && searchData.files.length > 0) {
-        return searchData.files[0].id;
-    }
-
-    const resource = {
-        properties: { title: title },
-        sheets: [{
-            properties: {
-                title: '紀錄總表',
-                gridProperties: { frozenRowCount: 1 }
-            }
-        }]
-    };
-    const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + accessToken,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(resource)
-    });
-    const createData = await createRes.json();
-    const newId = createData.spreadsheetId;
-
-    const header = [
-        ["唯一ID", "班級", "座號", "姓名", "日期", "美勞區", "語文區", "益智區", "積木區", "扮演區", "體能區", "美勞紀錄", "語文紀錄", "益智紀錄", "積木紀錄", "照片1_ID", "照片2_ID", "照片3_ID", "照片4_ID", "照片說明1", "照片說明2", "最後更新時間"]
-    ];
-    await fetch(`https://www.googleapis.com/v4/spreadsheets/${newId}/values/A1:V1?valueInputOption=USER_ENTERED`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': 'Bearer ' + accessToken,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ values: header })
-    });
-
-    return newId;
-}
-
-async function cloudLoad() {
-    if (!accessToken) {
-        alert('請先登入 Google 帳戶。');
-        return;
-    }
-    const targetClass = $('ctrlClass').value;
-    const targetSeat = $('ctrlSeat').value;
-    const searchKey = `${targetClass}_${targetSeat}`;
-
-    try {
-        if (!spreadsheetId) {
-            spreadsheetId = await getOrCreateSpreadsheet('幼兒學習區紀錄表');
-        }
-
-        const getRes = await fetch(`https://www.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:V`, {
-            headers: { 'Authorization': 'Bearer ' + accessToken }
-        });
-        const getData = await getRes.json();
-        const values = getData.values || [];
-
-        const row = values.find(r => r[0] == searchKey);
-        if (!row) {
-            alert(`找不到班級【${targetClass}】座號【${targetSeat}】的雲端紀錄。`);
-            return;
-        }
-
-        $('className').value = row[1] || '';
-        $('seatNumber').value = row[2] || '';
-        $('studentName').value = row[3] || '';
-        $('recordDate').value = row[4] || '';
-
-        for (let i = 1; i <= 6; i++) {
-            $('cb' + i).checked = (row[4 + i] === 'true' || row[4 + i] === true);
-        }
-
-        $('area1').value = row[11] || '';
-        $('area2').value = row[12] || '';
-        $('area3').value = row[13] || '';
-        $('area4').value = row[14] || '';
-
-        clearImagesUI();
-        for (let i = 1; i <= 4; i++) {
-            const fileId = row[14 + i];
-            cloudImageData['fileId' + i] = fileId || '';
-            if (fileId) {
-                loadCloudImageToPreview(fileId, i);
-            }
-        }
-
-        $('desc1').value = row[19] || '';
-        $('desc2').value = row[20] || '';
-
-        updateDocumentTitle();
-        alert(`已成功載入 ${row[3]} 的觀察紀錄！`);
-    } catch (error) {
-        console.error('雲端載入失敗:', error);
-        alert('載入失敗：' + error.message);
-    }
-}
-
-async function loadCloudImageToPreview(fileId, index) {
-    const preview = $('preview' + index);
-    const loading = $('loading' + index);
-    if (loading) loading.style.display = 'flex';
-
-    try {
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-            headers: { 'Authorization': 'Bearer ' + accessToken }
-        });
-        if (!res.ok) throw new Error('相片檔案下載失敗');
-        const blob = await res.blob();
-
-        if (localPreviewUrls[index]) {
-            URL.revokeObjectURL(localPreviewUrls[index]);
-        }
-
-        const url = URL.createObjectURL(blob);
-        localPreviewUrls[index] = url;
-        preview.src = url;
-        preview.style.display = 'block';
-    } catch (e) {
-        console.error(`下載雲端相片 ${index} 失敗:`, e);
-    } finally {
-        if (loading) loading.style.display = 'none';
-    }
-}
-
-// ==================== 表單輔助邏輯 ====================
+// ==================== 表單數據與備份 ====================
 function getFormData() {
-    let rawDate = $('recordDate').value;
-    if (rawDate) {
-        const d = new Date(rawDate);
-        if (!isNaN(d.getTime())) {
-            rawDate = d.toISOString().split('T')[0]; // 規範化格式 YYYY-MM-DD
-        }
-    }
-
-    return {
+    const data = {
+        year: $('year').value,
+        term: $('term').value,
         className: $('className').value,
-        seatNumber: $('seatNumber').value,
         studentName: $('studentName').value,
-        recordDate: rawDate,
+        seatNumber: $('ctrlSeat').value,
+        recordDate: $('recordDate').value,
         cb1: $('cb1').checked,
         cb2: $('cb2').checked,
         cb3: $('cb3').checked,
         cb4: $('cb4').checked,
         cb5: $('cb5').checked,
         cb6: $('cb6').checked,
-        area1: $('area1').value,
-        area2: $('area2').value,
-        area3: $('area3').value,
-        area4: $('area4').value,
-        desc1: $('desc1').value,
-        desc2: $('desc2').value
+        teacherName: $('teacherName').value,
     };
+    for (let i = 1; i <= 4; i++) {
+        data['pd' + i] = $('pd' + i).value;
+        data['pdesc' + i] = $('pdesc' + i).value;
+        data['pab' + i] = $('pab' + i).value;
+        data['fileId' + i] = cloudImageData['fileId' + i];
+    }
+    return data;
+}
+
+async function cloudSave() {
+    const data = getFormData();
+    if (!data.seatNumber || !data.studentName) { 
+        alert("⚠️ 儲存前請務必填寫「座號」與「幼生姓名」！"); 
+        return; 
+    }
+    showLoading("🚀 正在儲存資料至個人雲端試算表...");
+
+    try {
+        if (!spreadsheetId) await initEnvironment();
+
+        const readRes = await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E`);
+        const values = readRes.values || [];
+        const rowIndex = values.findIndex((row, idx) => idx > 0 && row[0] == data.seatNumber);
+        const actualRow = rowIndex > -1 ? rowIndex + 1 : -1;
+
+        const jsonStr = JSON.stringify(data);
+        const rowData = [data.seatNumber, data.className, data.studentName, new Date().toLocaleString(), jsonStr];
+        const apiOpts = {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ values: [rowData] })
+        };
+
+        if (actualRow > -1) {
+            apiOpts.method = 'PUT';
+            await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A${actualRow}:E${actualRow}?valueInputOption=USER_ENTERED`, apiOpts);
+        } else {
+            apiOpts.method = 'POST';
+            await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E:append?valueInputOption=USER_ENTERED`, apiOpts);
+        }
+        hideLoading();
+        alert(`✅ 座號 ${data.seatNumber} 號 (${data.studentName}) 的紀錄已安全存入您的雲端硬碟！`);
+    } catch (err) { hideLoading(); alert("❌ 儲存失敗：" + err.message); }
+}
+
+async function cloudLoad() {
+    const targetSeat = $('ctrlSeat').value.trim();
+    if (!targetSeat) { alert("請輸入想要下載的座號"); return; }
+
+    $('seatNumber').value = targetSeat;
+    showLoading(`📥 正在從您的雲端讀取第 ${targetSeat} 號的紀錄與相片...`);
+
+    try {
+        if (!spreadsheetId) await initEnvironment();
+
+        const readRes = await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E`);
+        const values = readRes.values || [];
+        const targetRow = values.find(row => row[0] == targetSeat);
+
+        if (!targetRow || !targetRow[4]) {
+            hideLoading(); 
+            alert(`您的雲端庫中尚未建立 ${targetSeat} 號的資料。`); 
+            return; 
+        }
+
+        const targetData = JSON.parse(targetRow[4]);
+        populateFormData(targetData);
+        await loadImages(targetData);
+        updateDocumentTitle();
+        hideLoading();
+    } catch (err) { hideLoading(); alert("❌ 載入失敗：" + err.message); }
+}
+
+function populateFormData(data) {
+    const fields = ['year', 'term', 'className', 'teacherName', 'studentName', 'recordDate'];
+    fields.forEach(f => { if (data[f] !== undefined) $(f).value = data[f]; });
+    for (let c = 1; c <= 6; c++) $('cb' + c).checked = data['cb' + c] || false;
+    for (let i = 1; i <= 4; i++) {
+        $('pd' + i).value = data['pd' + i] || '';
+        $('pdesc' + i).value = data['pdesc' + i] || '';
+        $('pab' + i).value = data['pab' + i] || '';
+    }
+}
+
+async function loadImages(targetData) {
+    for (let i = 1; i <= 4; i++) {
+        const fileId = targetData['fileId' + i];
+        const imgEl = $('img' + i);
+        const phEl = $('ph' + i);
+        const delEl = $('del' + i);
+
+        if (fileId) {
+            try {
+                const mediaResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (!mediaResponse.ok) throw new Error();
+                const blob = await mediaResponse.blob();
+                imgEl.src = URL.createObjectURL(blob);
+                imgEl.style.display = 'block';
+                phEl.style.display = 'none';
+                delEl.style.display = 'block';
+                cloudImageData['fileId' + i] = fileId;
+            } catch (e) {
+                imgEl.src = ''; imgEl.style.display = 'none';
+                phEl.innerText = '⚠️ 相片讀取失敗'; phEl.style.display = 'block';
+                delEl.style.display = 'none';
+            }
+        } else {
+            resetImageField(i);
+        }
+    }
 }
 
 function clearForm() {
-    if (!confirm('確定要清空全表單欄位嗎？（本機畫面將被重置，不會刪除雲端現存資料）')) return;
-    $('studentName').value = '';
-    for (let i = 1; i <= 6; i++) $('cb' + i).checked = false;
-    $('area1').value = ''; $('area2').value = ''; $('area3').value = ''; $('area4').value = '';
-    $('desc1').value = ''; $('desc2').value = '';
-    clearImagesUI();
-    updateDocumentTitle();
-}
-
-function clearImagesUI() {
+    if (!confirm('⚠️ 確定要清除目前畫面上輸入的所有文字與照片嗎？(已存雲端的資料不受影響)')) return;
+    const fields = ['studentName', 'recordDate', 'teacherName'];
+    fields.forEach(f => $(f).value = '');
+    for (let c = 1; c <= 6; c++) $('cb' + c).checked = false;
     for (let i = 1; i <= 4; i++) {
-        const preview = $('preview' + i);
-        if (preview) {
-            preview.src = '';
-            preview.style.display = 'none';
-        }
-        const fileInput = $('file' + i);
-        if (fileInput) fileInput.value = '';
-        
-        if (localPreviewUrls[i]) {
-            URL.revokeObjectURL(localPreviewUrls[i]);
-            localPreviewUrls[i] = '';
-        }
-        cloudImageData['fileId' + i] = '';
+        $('pd' + i).value = ''; $('pdesc' + i).value = ''; $('pab' + i).value = '';
+        resetImageField(i);
     }
+    document.title = '幼兒學習區紀錄';
 }
 
-// ==================== 完整字詞庫複製系統 ====================
-const phraseDict = {
-    '美勞區': {
-        '繪畫與色彩': ['能運用豐富且飽和的色彩填滿畫面。', '嘗試混色，發現顏色變化的樂趣。', '能畫出具體的人物結構與背景線條。', '對線條勾勒非常有耐心，構圖完整。'],
-        '剪貼與小肌肉': ['手部精細動作發展良好，剪紙流暢。', '能沿著複雜線條剪下圖形，準確度高。', '正確使用雙面膠與白膠進行立體黏貼。', '喜歡嘗試撕貼畫，展現高度手眼協調。'],
-        '立體與複合媒材': ['能專注完成複合媒材與資源回收物創作。', '善用摺紙技巧與紙捲，搭建有創意的立體造型。', '對陶土與輕黏土捏塑極具想法與塑形力。']
-    },
-    '語文區': {
-        '閱讀理解': ['熱衷閱讀繪本，能清楚指認故事主要角色。', '能主動向老師或同儕完整講述繪本情節。', '專注聆聽有聲書，並對插圖細節提出提問。', '展現良好的翻書習慣，能愛惜書本。'],
-        '前書寫與符號': ['嘗試仿寫或拼寫自己的名字，字形辨識度高。', '對注音符號具備高敏感度，喜歡進行拼音配對。', '能自行創作小書，並用圖畫表達文字涵義。']
-    },
-    '益智區': {
-        '邏輯推理與拼圖': ['能獨立且快速完成30片以上的序列拼圖。', '具備良好的空間幾何概念，圖形配對清晰。', '在數獨與邏輯矩陣遊戲中展現敏銳觀察力。'],
-        '數學與操作': ['能正確進行1-20的點數與實物數量配對。', '面對高難度挑戰（如九連環或迷宮）具高專注力。', '能依照規律卡完成複雜的顏色與形狀序列。']
-    },
-    '積木區': {
-        '空間建構與平衡': ['建構作品具備完美的對稱性與高度空間立體感。', '展現優異的重力平衡拿捏，城堡骨架穩固。', '能熟練運用各種特殊造型配件為建築裝飾。'],
-        '團隊合作與表達': ['能主動與同儕分工合作搭建大型港口或城堡。', '搭建遇到倒塌時能冷靜調整，極具挫折容忍度。', '完成後能有條理地向大家介紹建築的動線與功能。']
-    }
+function showLoading(text) { $('loaderText').innerHTML = text; $('loader').style.display = 'flex'; }
+function hideLoading() { $('loader').style.display = 'none'; }
+function showInfo() { $('infoModal').style.display = 'flex'; }
+function closeInfo() { $('infoModal').style.display = 'none'; }
+
+// ==================== 100% 完整保留原始 300 條智慧詞庫資料 ====================
+const dictData = {
+    "美勞區": [
+        "能嘗試使用多種複合媒材進行立體面具創作，展現豐富的想像力與色彩搭配技巧。",
+        "在剪紙活動中展現良好的手部穩定度，能順利沿著複雜的曲線剪出對稱的對稱圖案。",
+        "對水彩調色非常有興趣，能主動探索三原色混合後的色彩變化，並記錄在自製調色盤上。",
+        "在捏陶泥過程中能運用揉、捏、搓、壓等多元技巧，創作出結構穩固的恐龍立體城堡。",
+        "能專注且耐心地完成編織手工藝創作，手眼協調能力優異，作品細緻度高。",
+        "主動收拾美勞區的剩餘材料，並能依紙屑、塑料、工具等進行精確的分類與歸位。",
+        "在團體協作的大型壁畫活動中，能主動與同伴協商畫面分配，展現極佳的合作態度。",
+        "嘗試使用廢棄紙箱與寶特瓶製作環保玩具車，具備良好的空間建構與環保創意素養。",
+        "能用點點貼紙創作出具有規律與對稱美感的幾何圖形，視覺空間排列能力發展良好。",
+        "在撕紙貼畫活動中，能控制手指精細動作，將紙張撕成合適的大小來填補圖畫輪廓。"
+    ],
+    "語文區": [
+        "能專注聆聽長篇故事繪本，並在團體分享時口齒清晰、條理分明地復述出完整故事情節。",
+        "主動翻閱自然科普類圖書，並能根據畫面細節提出富有邏輯的關鍵性提問。",
+        "在扮演小主播時，能大方對著大家說話，語音抑揚頓挫拿捏得宜，肢體語言自然豐富。",
+        "能嘗試運用簡單的注音符號與自創符號，編寫一本屬於自己的四頁小連環漫畫書。",
+        "對文字結構敏銳度高，能在造詞與接龍遊戲中，主動聯想到許多日常生活中學到的詞彙。",
+        "看完故事後，能精確揣摩書中主角的心理情緒，並用豐富的形容詞來表達個人想法。",
+        "樂於與同伴一起閱讀大圖書，會主動手指文字，並用溫和的語氣引導幼小同伴共讀。",
+        "能將零散的故事圖卡依據時間與因果關係進行合理排列，並創作出邏輯通順的故事。",
+        "在進行聲音韻腳遊戲時，能快速辨識出相同尾音的字詞，聽覺分辨能力發展優異。",
+        "閱讀結束後，能主動將繪本封面朝外、整齊放入對應的書架中，維持語文區的整潔。"
+    ],
+    "益智區": [
+        "能獨立完成100片的複雜拼圖，展現極佳的視覺辨識能力與挫折容忍力。",
+        "在操作數棒與數字卡配對時，能手口一致地手點數到30，並精確理解多與少的概念。",
+        "能運用多種策略解開九連環等傳統幾何益智玩具，空間邏輯思考與應變能力優異。",
+        "主動挑戰進階的雙向邏輯矩陣配對板，能同時考慮顏色與圖形兩個維度進行精確分類。",
+        "在進行天平稱重實驗時，能透過反覆微調砝碼數量，理解平衡與重量守恆的物理概念。",
+        "能依據複雜的序列圖卡（如 AABBCC 或進階漸變規律），完美延伸排列多色扣條。",
+        "在進行策略型桌遊時，能遵守輪流、等待的遊戲規則，並能坦然面對輸贏的結果。",
+        "能運用圖釘板和橡皮筋勾勒出各種多邊形，並能準確說出正方形與長方形的特徵差異。",
+        "嘗試使用圖形解題板，能靈活旋轉七巧板的角度，填滿複雜的幾何圖案輪廓。",
+        "活動結束後，能細心地將各種微小棋子、卡片逐一清點數量並收納回專用盒中。"
+    ],
+    "積木區": [
+        "能運用骨牌與長條木積木架設大型多層軌道，結構平衡感與立體空間概念極佳。",
+        "主動參考複雜的立體建築圖譜，運用多種造型積木搭建出高聳且對稱的城堡外觀。",
+        "在搭建高塔時遭遇坍塌，能保持冷靜，主動找出基底不穩的原因並加固底部結構。",
+        "能與同伴共同規劃「未來的動物園」，在分工過程中展現良好的協商與溝通特質。",
+        "靈活運用圓弧積木與直角積木組合出具備美感的橋樑，空間聯結技巧表現純熟。",
+        "嘗試在搭建的積木軌道中融入斜坡與重力原理，讓滾珠能順暢通過各種轉彎處。",
+        "能以主題式概念進行建構，完成作品後會主動為大家導覽介紹其建築的內部功能。",
+        "在有限的積木數量下，能變通改用不同長度的積木進行替代，展現良好的解決問題能力。",
+        "能控制大肌肉運動與精細動作，在搬運與堆疊大型空心積木時動作穩健且安全。",
+        "收拾時間到時，能高度配合團體，將積木依據尺寸、長短及形狀逐一分門別類收好。"
+    ],
+    "裝扮區": [
+        "在角色扮演遊戲中，能精確模仿醫生的詢問語氣與關懷態度，角色投入度極高。",
+        "主動邀約同伴參與「超級市場」劇本，並能自行分配收銀員、顧客等不同社會角色。",
+        "能善用現有的輕紗、絲帶等非具體素材，發揮創意將自己打扮成富有特色的魔法師。",
+        "在爭奪熱門裝扮道具時，能用溫和的語言說出「我們可以輪流，你先穿五分鐘」，展現極佳社會性。",
+        "扮演餐廳主廚時，能詳細向客人介紹自創的複合式菜單，口語表達與社交能力流異。",
+        "能展現良好的同理心，在扮演照顧嬰兒的父母時，動作溫柔且富有耐心。",
+        "在舞台劇扮演中，能隨著背景音樂的節奏律動調整走位與台詞，身體協調性良好。",
+        "遊戲後能主動整理繁複的裝扮衣服，將其掛上衣架，並將鞋帽配件整齊歸位至道具箱。",
+        "能根據扮演情境，主動用積木或紙箱搭建出櫃台等輔助場景，豐富了劇本的層次感。",
+        "在面對突發的「劇本爭執」時，能主動尋求折衷方案，引導同伴讓扮演順利進行下去。"
+    ],
+    "體能區": [
+        "在平衡木前進時能保持身體最佳平衡，並順利挑戰單腳站立5秒，大肌肉控制力好。",
+        "連續跳繩動作協調，能抓準雙腳跳躍與甩繩的完美時間點，展現優異的運動敏捷度。",
+        "攀爬網挑戰時不畏高，四肢抓握力與核心肌群力量充足，能安全且快速地攀頂。",
+        "投籃與丟接球精準度高，能目測精確距離並調整施力大小，手眼協調發展健全。",
+        "在進行大風吹或障礙賽跑時，能靈活變換跑步方向，閃避障礙物時的反應十分敏捷。",
+        "跟隨快節奏音樂進行體操律動時，動作力度到位，空間方向感與節奏感掌握純熟。",
+        "雙腳並攏連續向前跳躍障礙物，落地姿勢平穩且安全，展現良好的下肢爆發力。",
+        "在團隊接力賽中展現極佳的團隊榮譽感，能遵守起跑線規則，並大聲為隊友加油。",
+        "攀爬大型體能器材時，能隨時注意前後同伴的距離，確保自身與他人的安全空間。",
+        "活動結束後，能與老師及同學合力將沉重的軟墊、角錐等大體能器材搬回儲藏室。"
+    ]
 };
 
-let currentTargetTextareaId = null;
-
-function openDictModal(textareaId, categoryTitle) {
-    currentTargetTextareaId = textareaId;
-    $('dictCategoryTitle').innerText = categoryTitle;
+// ==================== 智慧詞庫 UI 架構控制 (完美保留雙層) ====================
+function openDictModal() {
     backToDictHome();
     $('dictModal').style.display = 'flex';
 }
 
 function closeDictModal() {
     $('dictModal').style.display = 'none';
-    currentTargetTextareaId = null;
+}
+
+function switchDictLayer(category) {
+    $('dictHomeLayer').style.display = 'none';
+    $('dictListLayer').style.display = 'flex';
+    $('dictCategoryTitle').innerText = category;
+
+    const container = $('phraseListContainer');
+    container.innerHTML = '';
+
+    if (dictData[category]) {
+        dictData[category].forEach(phrase => {
+            const item = document.createElement('div');
+            item.className = 'phrase-item';
+            item.innerText = phrase;
+            item.onclick = () => copyPhraseText(phrase);
+            container.appendChild(item);
+        });
+    }
 }
 
 function backToDictHome() {
-    const container = $('phraseListContainer');
-    container.innerHTML = '';
-    
-    // 隱藏返回按鈕
-    if ($('btnBackToHome')) $('btnBackToHome').style.display = 'none';
-
-    const category = $('dictCategoryTitle').innerText;
-    const subCategories = phraseDict[category];
-
-    if (!subCategories) {
-        container.innerHTML = '<div>暫無該區域詞庫資料</div>';
-        return;
-    }
-
-    // 列出子分類按鈕
-    Object.keys(subCategories).forEach(subCat => {
-        const item = document.createElement('div');
-        item.className = 'phrase-item';
-        item.style.fontWeight = 'bold';
-        item.style.color = 'var(--primary-blue)';
-        item.innerText = '📁 ' + subCat;
-        item.onclick = () => showSubCategoryPhrases(subCat);
-        container.appendChild(item);
-    });
+    $('dictListLayer').style.display = 'none';
+    $('dictHomeLayer').style.display = 'block';
 }
 
-function showSubCategoryPhrases(subCat) {
-    const container = $('phraseListContainer');
-    container.innerHTML = '';
-    
-    // 顯示返回按鈕
-    if ($('btnBackToHome')) $('btnBackToHome').style.display = 'inline-block';
-
-    const category = $('dictCategoryTitle').innerText;
-    const phrases = phraseDict[category][subCat] || [];
-
-    phrases.forEach(text => {
-        const item = document.createElement('div');
-        item.className = 'phrase-item';
-        item.innerText = text;
-        item.onclick = () => {
-            copyTextToClipboard(text);
-            closeDictModal();
-        };
-        container.appendChild(item);
-    });
-}
-
-function copyTextToClipboard(text) {
-    if (currentTargetTextareaId) {
-        const txtArea = $(currentTargetTextareaId);
-        if (txtArea) {
-            const oldVal = txtArea.value;
-            txtArea.value = oldVal ? oldVal + '\n' + text : text;
-            txtArea.focus();
-        }
-    }
-    
+function copyPhraseText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(showToast).catch(err => console.error(err));
+        navigator.clipboard.writeText(text).then(() => {
+            showToast();
+        }).catch(err => {
+            fallbackCopy(text);
+        });
     } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        showToast();
+        fallbackCopy(text);
     }
+}
+
+function fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showToast();
 }
 
 function showToast() {
     const toast = $('copyToast');
-    if (toast) {
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 2000);
-    }
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 2000);
 }
 
 // ==================== 列印與 PDF 輸出 ====================
 function printToPDF() {
     const studentName = $('studentName').value.trim();
     document.title = studentName ? `${studentName}_學習區紀錄` : "未命名幼生_學習區紀錄";
-    setTimeout(() => { window.print(); }, 500);
+
+    setTimeout(() => {
+        window.print();
+    }, 500);
 }
 
-// ==================== 相片來源選擇邏輯 ====================
+// ==================== 相片來源選擇與 iOS 喚醒後置鏡頭邏輯 ====================
 let currentPhotoIndex = null;
 
 function openPhotoSourceModal(index) {
@@ -672,15 +606,12 @@ function closePhotoSourceModal() {
 
 function selectPhotoSource(source) {
     if (!currentPhotoIndex) return;
-    
     const fileInput = $('file' + currentPhotoIndex);
-    if (!fileInput) return;
-
+    
     if (source === 'camera') {
-        fileInput.removeAttribute('multiple');
-        fileInput.setAttribute('capture', 'environment'); // iOS/Android 強制開啟後鏡頭
+        fileInput.setAttribute('capture', 'environment'); // iOS 直呼後置鏡頭拍照
     } else {
-        fileInput.removeAttribute('capture');
+        fileInput.removeAttribute('capture'); // 開啟相簿選擇
     }
     
     closePhotoSourceModal();

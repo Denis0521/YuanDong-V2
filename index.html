@@ -13,7 +13,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="學習區紀錄">
 <link rel="apple-touch-icon" href="icon-192.png">
-
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
@@ -29,204 +28,1005 @@
         background-color: var(--bg-gray); 
         font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; 
         margin: 0; 
-        padding: 0;
+        padding: 0; 
+        padding-top: 140px; 
+        display: flex; 
+        justify-content: center; 
     }
 
-    .container { max-width: 900px; margin: 20px auto; background: white; padding: 20px; border: 2px solid var(--border-color); }
-    .control-panel { display: flex; gap: 10px; margin-bottom: 20px; background: #f8f9fa; padding: 10px; border: 1px dashed #ccc; border-radius: 5px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-    .btn { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; font-weight: bold; }
-    .btn-auth { background-color: var(--primary-blue); color: white; border: none; }
-    .btn-load { background-color: #34a853; color: white; border: none; }
-    .btn-save { background-color: #fbbc05; color: #000; border: none; }
-    .btn-print { background-color: #17a2b8; color: white; border: none; }
-    .btn-clear { background-color: #dc3545; color: white; border: none; }
+    .top-bar { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        right: 0; 
+        background: #353745; 
+        color: white; 
+        padding: 10px; 
+        display: flex; 
+        justify-content: center; 
+        z-index: 1000; 
+        border-bottom: 1px solid #222; 
+    }
 
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: fixed; }
-    th, td { border: 1px solid var(--border-color); padding: 8px; text-align: left; vertical-align: top; }
-    th { background-color: #f2f2f2; font-weight: bold; text-align: center; }
-    
-    input[type="text"], input[type="date"], textarea { width: 100%; border: 1px solid #ccc; padding: 6px; font-family: inherit; font-size: 16px; border-radius: 4px; }
-    textarea { resize: vertical; min-height: 100px; }
-    
-    .checkbox-group { display: flex; flex-wrap: wrap; gap: 15px; padding: 5px; }
-    .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 16px; }
-    
-    .photo-grid { display: grid; grid-template-columns: repeat(2, 100px); gap: 10px; justify-content: center; }
-    .photo-box { width: 100px; height: 100px; border: 1px solid #999; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; background: #fafafa; position: relative; overflow: hidden; font-size: 12px; text-align: center; }
-    .photo-box img { width: 100%; height: 100%; object-fit: cover; display: none; position: absolute; top:0; left:0; z-index: 2; }
-    
-    .loading-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); display:none; justify-content:center; align-items:center; font-size:11px; color:#333; z-index: 5; }
-    
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; position: relative; }
-    .modal-close { position: absolute; top: 10px; right: 10px; font-size: 20px; cursor: pointer; border: none; background: transparent; }
-    .phrase-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 16px; }
-    .phrase-item:hover { background-color: #f0f4f9; }
-    
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; display: none; z-index: 2000; font-size: 14px; }
-    
-    .btn-dict { margin-top: 5px; font-size: 13px; background: #f0f4f9; color: var(--primary-blue); border: 1px solid var(--primary-blue); padding: 3px 8px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+    .top-bar-row { 
+        display: grid; 
+        grid-template-columns: repeat(6, 1fr); 
+        gap: 8px; 
+        width: 100%; 
+        max-width: 700px; 
+        margin: 0 auto; 
+    }
 
-    /* 行動裝置適配與網頁列印 RWD */
-    @media (max-width: 600px) {
-        .control-panel { flex-direction: column; align-items: stretch; }
-        table, thead, tbody, th, td, tr { display: block; }
-        th { text-align: left; background-color: #e8eaed; }
-        td { width: 100% !important; }
-        .photo-grid { grid-template-columns: repeat(4, 1fr); }
+    .btn-half { grid-column: span 3; }
+    .btn-third { grid-column: span 2; }
+
+    .seat-control { 
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center; 
+        width: 100%; 
+        height: 34px; 
+        background: linear-gradient(to bottom, #595a68, #424350); 
+        border: 1px solid rgba(255, 255, 255, 0.15); 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.1); 
+        border-radius: 20px; 
+        color: #fff; 
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.5); 
+        font-weight: bold; 
+        font-family: "Microsoft JhengHei", sans-serif; 
+        font-size: 14px; 
+    }
+
+    .seat-input { 
+        padding: 2px 4px; 
+        font-size: 14px; 
+        border-radius: 12px; 
+        border: none; 
+        width: 45px; 
+        text-align: center; 
+        font-weight: bold; 
+        background: rgba(255,255,255,0.9); 
+        color: #333; 
+        margin-left: 6px; 
+        outline: none; 
+    }
+
+    .btn { 
+        width: 100%; 
+        height: 34px; 
+        padding: 0 4px; 
+        border-radius: 20px; 
+        background: rgba(255, 255, 255, 0.15); 
+        border: 1px solid rgba(255, 255, 255, 0.15); 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.1); 
+        color: #fff; 
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.5); 
+        font-size: 14px; 
+        font-weight: bold; 
+        font-family: "Microsoft JhengHei", sans-serif; 
+        cursor: pointer; 
+        display: inline-flex; 
+        justify-content: center; 
+        align-items: center; 
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+    }
+
+    .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+    .btn:active { transform: scale(0.96) translateY(0); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+    @media screen and (max-width: 400px) {
+        .btn { font-size: 13px; letter-spacing: -0.5px; }
+        .seat-control { font-size: 13px; letter-spacing: -0.5px; }
+        .seat-input { width: 35px; }
+    }
+
+    .btn-auth { background: linear-gradient(to bottom, #4285f4, #2b5cbf); }
+    .btn-clear { background: linear-gradient(to bottom, #775c88, #594165); }
+    .btn-save { background: linear-gradient(to bottom, #53886f, #3b624f); }
+    .btn-load { background: linear-gradient(to bottom, #9d7b43, #72582f); }
+    .btn-print { background: linear-gradient(to bottom, #8e6268, #664349); }
+    .btn-dict { background: linear-gradient(to bottom, #a7883a, #786326); } 
+    .btn-info { background: linear-gradient(to bottom, #49859a, #305869); } 
+
+    .a4-page { 
+        width: 210mm; 
+        min-height: 297mm; 
+        background: white; 
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
+        padding: 10mm 15mm 10mm 15mm; 
+        position: relative; 
+        margin-bottom: 30px; 
+        overflow: hidden; 
+    }
+
+    h1 { 
+        text-align: center; 
+        font-size: 19px; 
+        margin: 0 0 8px 0; 
+        font-weight: bold; 
+        letter-spacing: 0.5px; 
+    }
+
+    .title-input { 
+        font-size: 19px; 
+        font-family: inherit; 
+        border: none; 
+        text-align: center; 
+        outline: none; 
+        font-weight: bold; 
+        background: rgba(0,0,0,0.04); 
+        border-radius: 4px; 
+    }
+
+    .title-input.year { width: 50px; } 
+    .title-input.term { width: 30px; }
+
+    .header-info { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        font-size: 16px; 
+        margin-bottom: 10px; 
+        width: 100%; 
+    }
+
+    .header-col { 
+        display: flex; 
+        align-items: center; 
+        white-space: nowrap; 
+    }
+
+    .header-col input, .header-col select { 
+        font-size: 16px; 
+        font-family: inherit; 
+        border: none; 
+        outline: none; 
+        background: rgba(0,0,0,0.05); 
+        border-radius: 4px; 
+        padding: 4px 6px; 
+        margin-left: 6px; 
+        text-align: center; 
+        color: #000; 
+    }
+
+    .class-col select { width: 75px; } 
+    .name-col input { width: 100px; } 
+    .seat-col input { width: 45px; } 
+    .date-col input { width: 150px; text-align: left; padding-left: 8px; } 
+
+    .table-wrapper { width: 100%; }
+
+    table.main-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        border: 1px solid var(--border-color); 
+        table-layout: fixed; 
+    }
+
+    table.main-table td { 
+        border: 1px solid var(--border-color); 
+        padding: 0; 
+        vertical-align: top; 
+    } 
+
+    .checkbox-cell { 
+        padding: 4px 10px !important; 
+        text-align: left; 
+        font-size: 16px; 
+        vertical-align: middle !important; 
+        height: 38px; 
+    }
+
+    .checkbox-cell input[type="checkbox"] { 
+        transform: scale(1.2); 
+        margin-right: 4px; 
+        vertical-align: middle; 
+        cursor: pointer; 
+    }
+
+    .checkbox-icon { 
+        font-size: 16px; 
+        margin-right: 3px; 
+        vertical-align: middle; 
+    }
+
+    .photo-cell { 
+        display: flex; 
+        flex-direction: column; 
+        height: 410px; 
+        position: relative; 
+    }
+
+    .photo-area { 
+        height: 250px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        border-bottom: 1px solid var(--border-color); 
+        cursor: pointer; 
+        overflow: hidden; 
+        position: relative; 
+        background-color: #f9f9f9; 
+        -webkit-tap-highlight-color: transparent; 
+    }
+
+    .photo-area:active { background-color: #e0e0e0; }
+
+    .photo-area img { 
+        width: 100%; 
+        height: 100%; 
+        object-fit: contain; 
+        display: none; 
+    }
+
+    .photo-placeholder { 
+        color: #888; 
+        font-size: 12px; 
+        text-align: center; 
+        padding: 2px; 
+        position: absolute; 
+        top: 50%; 
+        left: 50%; 
+        transform: translate(-50%, -50%); 
+        width: 100%; 
+        pointer-events: none; 
+    }
+
+    .delete-btn { 
+        position: absolute; 
+        top: 4px; 
+        right: 4px; 
+        background-color: rgba(244, 67, 54, 0.85); 
+        color: white; 
+        border: none; 
+        border-radius: 50%; 
+        width: 22px; 
+        height: 22px; 
+        font-size: 12px; 
+        line-height: 22px; 
+        text-align: center; 
+        cursor: pointer; 
+        z-index: 10; 
+        display: none; 
+    }
+
+    .text-area { 
+        padding: 6px 8px; 
+        font-size: 15px; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: space-between; 
+        height: 160px; 
+    }
+
+    .tf-row { 
+        display: flex; 
+        align-items: center; 
+        width: 100%; 
+    }
+
+    .tf-row input { 
+        flex-grow: 1; 
+        font-size: 15px; 
+        font-family: inherit; 
+        border: none; 
+        outline: none; 
+        background: rgba(0,0,0,0.04); 
+        border-radius: 4px; 
+        padding: 2px 6px; 
+        min-height: 24px; 
+    }
+
+    .top-line { 
+        border-top: 1px solid var(--border-color); 
+        padding-top: 6px; 
+        margin-top: 4px; 
+    }
+
+    .text-label { 
+        font-weight: normal; 
+        flex-shrink: 0; 
+        font-size: 15px; 
+    }
+
+    .footer-container { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        font-size: 15px; 
+        padding: 8px 4px 0 4px; 
+    }
+
+    .footer-container input { 
+        font-size: 15px; 
+        font-family: inherit; 
+        border: none; 
+        outline: none; 
+        width: 100px; 
+        text-align: center; 
+        background: rgba(0,0,0,0.04); 
+        border-radius: 4px; 
+        padding: 2px 4px;
+    }
+
+    .footer-note { font-weight: bold; font-size: 14px; }
+
+    .loader-overlay { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%; 
+        background: rgba(0,0,0,0.85); 
+        display: none; 
+        z-index: 3000; 
+        justify-content: center; 
+        align-items: center; 
+        flex-direction: column; 
+        color: white; 
+        font-family: "Microsoft JhengHei", sans-serif; 
+        font-size: 16px; 
+        text-align: center;
+    }
+
+    .spinner { 
+        border: 5px solid #f3f3f3; 
+        border-top: 5px solid #34a853; 
+        border-radius: 50%; 
+        width: 40px; 
+        height: 40px; 
+        animation: spin 1s linear infinite; 
+        margin-bottom: 15px; 
+    }
+
+    @keyframes spin { 
+        0% { transform: rotate(0deg); } 
+        100% { transform: rotate(360deg); } 
+    }
+
+    @media screen {
+        table.main-table { border: none !important; }
+        table.main-table td { border: none !important; }
+        table.main-table td.photo-wrapper-td { 
+            border: 1px solid var(--border-color) !important; 
+        }
+    }
+
+    @media screen and (max-width: 800px) {
+        body { 
+            padding-top: 130px; 
+            background-color: #fff; 
+        }
+
+        .a4-page { 
+            width: 100%; 
+            height: auto; 
+            box-shadow: none; 
+            padding: 15px; 
+            margin-top: 0; 
+            margin-bottom: 0; 
+            border-radius: 0; 
+        }
+
+        h1 { 
+            font-size: 20px; 
+            line-height: 1.5; 
+            margin-bottom: 15px; 
+        }
+
+        .title-input { 
+            background: #fff; 
+            border: 1px solid #ccc !important; 
+        }
+
+        .header-info { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 12px; 
+            margin-bottom: 15px; 
+        }
+
+        .header-col { 
+            display: flex; 
+            flex-direction: row; 
+            align-items: center; 
+        }
+
+        .class-col { width: calc(40% - 6px); } 
+        .name-col { width: calc(60% - 6px); } 
+        .seat-col { width: calc(32% - 6px); } 
+        .date-col { width: calc(68% - 6px); }
+
+        .header-col input, .header-col select { 
+            flex-grow: 1; 
+            width: 100%; 
+            height: 42px; 
+            border: 1px solid #ccc !important; 
+            background: #fff; 
+            text-align: left; 
+            padding: 0 10px; 
+            font-size: 16px;
+        }
+
+        table.main-table { 
+            display: flex; 
+            flex-wrap: wrap; 
+            width: 100%; 
+            border: none !important; 
+        }
+
+        table.main-table tbody, table.main-table tr { display: contents; }
+
+        .checkbox-cell { 
+            flex: 0 0 50%; 
+            max-width: 50%; 
+            height: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: flex-start; 
+            padding-left: 15px !important; 
+            border: none !important; 
+            background: #fff; 
+        }
+
+        .checkbox-cell input[type="checkbox"] { 
+            transform: scale(1.5); 
+            margin-right: 10px; 
+        }
+
+        td.photo-wrapper-td { 
+            flex: 0 0 100%; 
+            max-width: 100%; 
+            display: block; 
+            margin-top: 20px; 
+            border: 2px solid #000 !important; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            background: #fff; 
+        }
+
+        .photo-cell { height: auto; }
+
+        .photo-area { 
+            height: 280px; 
+            background-color: #f8f9fa; 
+            border-bottom: 2px solid #000; 
+        }
+
+        .text-area { 
+            height: auto; 
+            padding: 15px; 
+            gap: 12px; 
+        }
+
+        .tf-row { 
+            flex-direction: column; 
+            align-items: flex-start; 
+            width: 100%; 
+        }
+
+        .tf-row.inline-mobile { 
+            flex-direction: row; 
+            align-items: center; 
+        } 
+
+        .tf-row.inline-mobile input[type="text"] { 
+            width: auto; 
+            flex-grow: 1; 
+            margin-left: 10px; 
+            margin-top: 0; 
+        }
+
+        .text-label { 
+            font-size: 15px; 
+            color: var(--primary-blue); 
+            font-weight: bold; 
+            margin-bottom: 4px; 
+        }
+
+        .tf-row input[type="text"] { 
+            border: 1px solid #ccc !important; 
+            height: 45px; 
+            font-size: 16px !important; 
+            border-radius: 6px; 
+            padding: 0 12px !important; 
+            background: #fff; 
+            width: 100%; 
+            margin-top: 4px; 
+        }
+
+        .top-line { 
+            border: none; 
+            padding: 0; 
+            margin-top: 10px; 
+        }
+
+        .footer-container { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-start; 
+            padding-top: 25px; 
+            gap: 15px; 
+        }
+
+        .footer-container div { 
+            width: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-start; 
+        }
+
+        .footer-container input { 
+            width: 100%; 
+            height: 45px; 
+            font-size: 16px; 
+            border: 1px solid #ccc !important; 
+            border-radius: 6px; 
+            text-align: left; 
+            padding: 0 12px; 
+            margin-left: 0; 
+            margin-top: 4px; 
+            background: #fff; 
+        }
     }
 
     @media print {
-        body { background: white; }
-        .container { border: none; padding: 0; margin: 0; max-width: 100%; }
-        .control-panel, .btn-dict, .no-print { display: none !important; }
-        textarea { border: none; border-bottom: 1px dashed #ccc; background: transparent; overflow: hidden; height: auto; }
-        input[type="text"], input[type="date"] { border: none; background: transparent; }
+        @page { 
+            margin: 0; 
+            size: A4 portrait; 
+        }
+
+        body { 
+            background-color: white; 
+            padding: 0; 
+            margin: 0; 
+            display: block; 
+        }
+
+        .top-bar, .delete-btn { display: none !important; }
+
+        .table-wrapper { overflow-x: visible; }
+
+        .a4-page { 
+            box-shadow: none !important; 
+            margin: 0 auto !important; 
+            padding: calc(15mm + 10px) 15mm 15mm 15mm !important; 
+            width: 210mm !important; 
+            height: 297mm !important; 
+            box-sizing: border-box !important; 
+            overflow: hidden !important; 
+            page-break-after: always !important; 
+            display: block !important; 
+            border-radius: 0 !important; 
+            position: relative !important; 
+            top: auto !important; 
+            left: auto !important; 
+            transform: none !important; 
+        }
+
+        .header-info { 
+            display: flex !important; 
+            flex-direction: row !important; 
+            flex-wrap: nowrap !important; 
+            justify-content: space-between !important; 
+            width: 100% !important; 
+            margin-bottom: 6px !important; 
+        }
+
+        .header-col { 
+            width: auto !important; 
+            display: flex !important; 
+            flex-direction: row !important; 
+            align-items: center !important; 
+        }
+
+        .header-col input, .header-col select { 
+            margin-left: 4px !important; 
+            margin-top: 0 !important; 
+            font-size: 16px !important; 
+            height: auto !important; 
+            border: none !important; 
+            border-radius: 0 !important; 
+            padding: 0 !important; 
+            text-align: center !important; 
+            background: transparent !important; 
+        }
+
+        .class-col select { width: 75px !important; } 
+        .name-col input { width: 100px !important; } 
+        .seat-col input { width: 45px !important; } 
+        .date-col input { width: 150px !important; text-align: left !important; } 
+
+        .title-input { background: transparent !important; border: none !important; }
+
+        table.main-table { 
+            display: table !important; 
+            width: 100% !important; 
+            border-collapse: collapse !important; 
+            border: 1px solid var(--border-color) !important; 
+        }
+
+        table.main-table tbody { display: table-row-group !important; }
+        table.main-table tr { display: table-row !important; flex-wrap: nowrap !important; width: auto !important; }
+        table.main-table td { display: table-cell !important; border: 1px solid var(--border-color) !important; }
+
+        .checkbox-cell { 
+            width: auto !important; 
+            height: 38px !important; 
+            display: table-cell !important; 
+            padding: 4px 10px !important; 
+        }
+
+        .checkbox-cell input[type="checkbox"] { transform: scale(1.2) !important; }
+
+        td.photo-wrapper-td { 
+            display: table-cell !important; 
+            width: 50% !important; 
+            margin-top: 0 !important; 
+            border: 1px solid var(--border-color) !important; 
+            border-radius: 0 !important; 
+            box-shadow: none !important; 
+            padding: 0 !important; 
+        }
+
+        .photo-cell { height: 410px !important; }
+
+        .photo-area { 
+            height: 250px !important; 
+            background-color: transparent !important; 
+            border-bottom: 1px solid var(--border-color) !important; 
+        }
+
+        .text-area { 
+            height: 160px !important; 
+            padding: 6px 8px !important; 
+            background-color: transparent !important; 
+            gap: 0 !important; 
+        }
+
+        .tf-row { flex-direction: row !important; align-items: center !important; }
+        .text-label { font-size: 15px !important; color: #000 !important; font-weight: normal !important; margin-bottom: 0 !important; }
+
+        .tf-row input[type="text"] { 
+            border: none !important; 
+            height: auto !important; 
+            font-size: 15px !important; 
+            border-radius: 0 !important; 
+            padding: 2px 6px !important; 
+            background: transparent !important; 
+            width: auto !important; 
+            flex-grow: 1 !important; 
+            margin-top: 0 !important; 
+        }
+
+        .top-line { 
+            border-top: 1px solid var(--border-color) !important; 
+            padding-top: 6px !important; 
+            margin-top: 4px !important; 
+        }
+
+        .footer-container { 
+            display: flex !important; 
+            flex-direction: row !important; 
+            justify-content: space-between !important; 
+            align-items: center !important; 
+            padding-top: 8px !important; 
+            gap: 0 !important; 
+        }
+
+        .footer-container div { 
+            width: auto !important; 
+            display: flex !important; 
+            flex-direction: row !important; 
+            align-items: center !important; 
+        }
+
+        .footer-container input { 
+            width: 100px !important; 
+            height: auto !important; 
+            font-size: 15px !important; 
+            border: none !important; 
+            border-radius: 0 !important; 
+            text-align: center !important; 
+            padding: 2px 4px !important; 
+            margin-left: 6px !important; 
+            margin-top: 0 !important; 
+            background: transparent !important; 
+        }
     }
+
+    /* 吐司提示 */
+    .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: 14px;
+        z-index: 4000;
+        display: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        font-family: "Microsoft JhengHei", sans-serif;
+    }
+
+    /* 智慧詞庫與照片來源彈出視窗基礎樣式 */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        padding: 15px;
+    }
+    .modal-content {
+        background: white;
+        width: 100%;
+        max-width: 600px;
+        border-radius: 12px;
+        padding: 20px;
+        position: relative;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        font-family: "Microsoft JhengHei", sans-serif;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .modal-close {
+        position: absolute;
+        top: 12px; right: 15px;
+        background: none; border: none;
+        font-size: 20px; cursor: pointer; color: #999;
+    }
+    .modal-close:hover { color: #333; }
+    .modal-title {
+        font-size: 18px; font-weight: bold; margin: 0 0 15px 0; color: #333;
+    }
+    
+    /* 智慧詞庫專用 */
+    .dict-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    .dict-cat-btn {
+        height: 55px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        background: #f8f9fa;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+    .dict-cat-btn:hover { background: #eef2f7; border-color: var(--primary-blue); color: var(--primary-blue); }
+    .phrase-list {
+        overflow-y: auto;
+        flex-grow: 1;
+        padding-right: 5px;
+    }
+    .phrase-item {
+        padding: 10px 12px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        font-size: 15px;
+        line-height: 1.5;
+        transition: background 0.15s;
+    }
+    .phrase-item:hover { background: #f0f7ff; color: var(--primary-blue); }
 </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="control-panel">
-        <div>
-            <button id="btnSignIn" class="btn btn-auth" onclick="handleAuthClick()">🔑 連接 Google 雲端</button>
-            <button id="btnSignOut" class="btn btn-clear" style="display:none;" onclick="handleSignoutClick()">🚪 登出</button>
+<div class="top-bar">
+    <div class="top-bar-row">
+        <button class="btn btn-auth btn-half" id="loginBtn" onclick="handleAuthClick()">🔵 Google 登入</button>
+        <div class="seat-control btn-half">
+            座號<input type="number" id="ctrlSeat" class="seat-input" min="1" max="50" value="1">
+            <button onclick="cloudLoad()" style="margin-left:8px; background:none; border:none; color:#5df; font-weight:bold; cursor:pointer; font-size:14px;">下載</button>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <input type="text" id="ctrlClass" placeholder="班級" style="width: 70px;" value="大班">
-            <input type="text" id="ctrlSeat" placeholder="座號" style="width: 50px;" value="01">
-            <button class="btn btn-load" onclick="cloudLoad()">📥 載入雲端紀錄</button>
-            <button class="btn btn-save" onclick="cloudSave()">💾 同步至雲端</button>
-            <button class="btn btn-print" onclick="printToPDF()">🖨️ 列印/PDF</button>
-            <button class="btn btn-clear" onclick="clearForm()">🧹 清空畫面</button>
+        <button class="btn btn-save btn-third" onclick="cloudSave()">💾 儲存雲端</button>
+        <button class="btn btn-print btn-third" onclick="printToPDF()">🖨️ 輸出 PDF</button>
+        <button class="btn btn-dict btn-third" onclick="openDictModal()">💡 智慧詞庫</button>
+        <button class="btn btn-clear btn-half" onclick="clearForm()">🗑️ 清除畫面</button>
+        <button class="btn btn-info btn-half" onclick="showInfo()">ℹ️ 使用說明</button>
+    </div>
+</div>
+
+<div class="a4-page" id="printArea">
+    <h1>
+        <input type="text" id="year" class="title-input year" value="113"> 學年度第 
+        <input type="text" id="term" class="title-input term" value="1"> 學期 幼兒學習區紀錄表
+    </h1>
+
+    <div class="header-info">
+        <div class="header-col class-col">
+            <span>班級：</span>
+            <select id="className">
+                <option value="寶貝班">寶貝班</option>
+                <option value="幼幼班">幼幼班</option>
+                <option value="小班">小班</option>
+                <option value="中班">中班</option>
+                <option value="大班">大班</option>
+            </select>
+        </div>
+        <div class="header-col name-col">
+            <span>姓名：</span>
+            <input type="text" id="studentName" placeholder="請輸入">
+        </div>
+        <div class="header-col seat-col">
+            <span>座號：</span>
+            <input type="text" id="seatNumber" readonly value="1">
+        </div>
+        <div class="header-col date-col">
+            <span>紀錄日期：</span>
+            <input type="text" id="recordDate" placeholder="點擊選擇日期" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
         </div>
     </div>
 
-    <h1 style="text-align: center; margin-top: 0;">幼兒學習區紀錄表</h1>
-    
-    <table>
-        <tr>
-            <th style="width: 15%;">班級</th>
-            <td style="width: 18%;"><input type="text" id="className" value="大班"></td>
-            <th style="width: 12%;">座號</th>
-            <td style="width: 15%;"><input type="text" id="seatNumber" value="01"></td>
-            <th style="width: 12%;">幼生姓名</th>
-            <td style="width: 28%;"><input type="text" id="studentName" placeholder="請輸入姓名"></td>
-        </tr>
-        <tr>
-            <th>紀錄日期</th>
-            <td colspan="5">
-                <input type="date" id="recordDate" style="width: 200px;">
-            </td>
-        </tr>
-        <tr>
-            <th>本週選擇<br>學習區</th>
-            <td colspan="5">
-                <div class="checkbox-group">
-                    <label><input type="checkbox" id="cb1"> 美勞區</label>
-                    <label><input type="checkbox" id="cb2"> 語文區</label>
-                    <label><input type="checkbox" id="cb3"> 益智區</label>
-                    <label><input type="checkbox" id="cb4"> 積木區</label>
-                    <label><input type="checkbox" id="cb5"> 扮演區</label>
-                    <label><input type="checkbox" id="cb6"> 體能區</label>
-                </div>
-            </td>
-        </tr>
-        
-        <tr>
-            <th colspan="2">學習區觀察紀錄</th>
-            <th colspan="2">幼生作品/活動照片 (最多4張)</th>
-            <th colspan="2">照片說明 (選填)</th>
-        </tr>
-        
-        <tr>
-            <td colspan="2">
-                <strong style="color:var(--primary-blue);">【觀察紀錄 A】</strong>
-                <textarea id="area1" placeholder="請輸入美勞區或其他觀察內容..."></textarea>
-                <button class="btn-dict no-print" onclick="openDictModal('area1','美勞區')">💡 美勞詞庫</button>
-            </td>
-            <td colspan="2" style="text-align: center; vertical-align: middle;">
-                <div class="photo-grid">
-                    <div class="photo-box" onclick="openPhotoSourceModal(1)">
-                        <span>➕ 新增照片1</span>
-                        <img id="preview1" alt="照片預覽1">
-                        <div class="loading-overlay" id="loading1">壓縮中...</div>
-                    </div>
-                    <div class="photo-box" onclick="openPhotoSourceModal(2)">
-                        <span>➕ 新增照片2</span>
-                        <img id="preview2" alt="照片預覽2">
-                        <div class="loading-overlay" id="loading2">壓縮中...</div>
-                    </div>
-                </div>
-                <input type="file" id="file1" accept="image/*" style="display: none;">
-                <input type="file" id="file2" accept="image/*" style="display: none;">
-            </td>
-            <td colspan="2">
-                <textarea id="desc1" placeholder="請輸入相片1、2的補充說明..." style="min-height: 130px;"></textarea>
-            </td>
-        </tr>
+    <div class="table-wrapper">
+        <table class="main-table">
+            <tbody>
+                <tr>
+                    <td class="checkbox-cell"><label><input type="checkbox" id="cb1"><span class="checkbox-icon">🎨</span>美勞展現</label></td>
+                    <td class="checkbox-cell"><label><input type="checkbox" id="cb2"><span class="checkbox-icon">🗣️</span>語文溝通</label></td>
+                    <td class="checkbox-cell"><label><input type="checkbox" id="cb3"><span class="checkbox-icon">🧩</span>益智探究</label></td>
+                </tr>
+                <tr>
+                    <td class="checkbox-cell"><label><input type="checkbox" id="cb4"><span class="checkbox-icon">🧱</span>積木建構</label></td>
+                    <td class="checkbox-cell"><label><input type="checkbox" id="cb5"><span class="checkbox-icon">🎭</span>裝扮扮演</label></td>
+                    <td class="checkbox-cell"><label><input type="checkbox" id="cb6"><span class="checkbox-icon">🏃‍♂️</span>體能動作</label></td>
+                </tr>
 
-        <tr>
-            <td colspan="2">
-                <strong style="color:var(--primary-blue);">【觀察紀錄 B】</strong>
-                <textarea id="area2" placeholder="請輸入語文/益智/積木區等觀察內容..."></textarea>
-                <div class="no-print">
-                    <button class="btn-dict" onclick="openDictModal('area2','語文區')">💡 語文詞庫</button>
-                    <button class="btn-dict" onclick="openDictModal('area2','益智區')">💡 益智詞庫</button>
-                    <button class="btn-dict" onclick="openDictModal('area2','積木區')">💡 積木詞庫</button>
-                </div>
-                <textarea id="area3" style="display:none;"></textarea>
-                <textarea id="area4" style="display:none;"></textarea>
-            </td>
-            <td colspan="2" style="text-align: center; vertical-align: middle;">
-                <div class="photo-grid">
-                    <div class="photo-box" onclick="openPhotoSourceModal(3)">
-                        <span>➕ 新增照片3</span>
-                        <img id="preview3" alt="照片預覽3">
-                        <div class="loading-overlay" id="loading3">壓縮中...</div>
-                    </div>
-                    <div class="photo-box" onclick="openPhotoSourceModal(4)">
-                        <span>➕ 新增照片4</span>
-                        <img id="preview4" alt="照片預覽4">
-                        <div class="loading-overlay" id="loading4">壓縮中...</div>
-                    </div>
-                </div>
-                <input type="file" id="file3" accept="image/*" style="display: none;">
-                <input type="file" id="file4" accept="image/*" style="display: none;">
-            </td>
-            <td colspan="2">
-                <textarea id="desc2" placeholder="請輸入相片3、4的補充說明..." style="min-height: 130px;"></textarea>
-            </td>
-        </tr>
-    </table>
+                <tr>
+                    <td colspan="1" class="photo-wrapper-td">
+                        <div class="photo-cell">
+                            <div class="photo-area" onclick="openPhotoSourceModal(1)">
+                                <span class="photo-placeholder" id="ph1">輕觸上傳相片 (區1)</span>
+                                <img id="img1" alt="區1照片">
+                                <button class="delete-btn" id="del1" onclick="removeImage(1, event)">✖</button>
+                            </div>
+                            <div class="text-area">
+                                <div class="tf-row"><span class="text-label">學習區：</span><input type="text" id="pd1" placeholder="例如：美勞區"></div>
+                                <div class="tf-row top-line"><span class="text-label">行為描述：</span><input type="text" id="pdesc1" placeholder="幼兒行為表現點"></div>
+                                <div class="tf-row top-line"><span class="text-label">能力指標：</span><input type="text" id="pab1" placeholder="對應學習指標描述"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td colspan="2" class="photo-wrapper-td">
+                        <div class="photo-cell">
+                            <div class="photo-area" onclick="openPhotoSourceModal(2)">
+                                <span class="photo-placeholder" id="ph2">輕觸上傳相片 (區2)</span>
+                                <img id="img2" alt="區2照片">
+                                <button class="delete-btn" id="del2" onclick="removeImage(2, event)">✖</button>
+                            </div>
+                            <div class="text-area">
+                                <div class="tf-row"><span class="text-label">學習區：</span><input type="text" id="pd2" placeholder="例如：積木區"></div>
+                                <div class="tf-row top-line"><span class="text-label">行為描述：</span><input type="text" id="pdesc2" placeholder="幼兒行為表現點"></div>
+                                <div class="tf-row top-line"><span class="text-label">能力指標：</span><input type="text" id="pab2" placeholder="對應學習指標描述"></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2" class="photo-wrapper-td">
+                        <div class="photo-cell">
+                            <div class="photo-area" onclick="openPhotoSourceModal(3)">
+                                <span class="photo-placeholder" id="ph3">輕觸上傳相片 (區3)</span>
+                                <img id="img3" alt="區3照片">
+                                <button class="delete-btn" id="del3" onclick="removeImage(3, event)">✖</button>
+                            </div>
+                            <div class="text-area">
+                                <div class="tf-row"><span class="text-label">學習區：</span><input type="text" id="pd3" placeholder="例如：益智區"></div>
+                                <div class="tf-row top-line"><span class="text-label">行為描述：</span><input type="text" id="pdesc3" placeholder="幼兒行為表現點"></div>
+                                <div class="tf-row top-line"><span class="text-label">能力指標：</span><input type="text" id="pab3" placeholder="對應學習指標描述"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td colspan="1" class="photo-wrapper-td">
+                        <div class="photo-cell">
+                            <div class="photo-area" onclick="openPhotoSourceModal(4)">
+                                <span class="photo-placeholder" id="ph4">輕觸上傳相片 (區4)</span>
+                                <img id="img4" alt="區4照片">
+                                <button class="delete-btn" id="del4" onclick="removeImage(4, event)">✖</button>
+                            </div>
+                            <div class="text-area">
+                                <div class="tf-row"><span class="text-label">學習區：</span><input type="text" id="pd4" placeholder="例如：語文區"></div>
+                                <div class="tf-row top-line"><span class="text-label">行為描述：</span><input type="text" id="pdesc4" placeholder="幼兒行為表現點"></div>
+                                <div class="tf-row top-line"><span class="text-label">能力指標：</span><input type="text" id="pab4" placeholder="對應學習指標描述"></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer-container">
+        <span class="footer-note">※ 本表單請妥善保存，作為幼兒發展評量之重要依據。</span>
+        <div>
+            <span>紀錄教師簽名：</span>
+            <input type="text" id="teacherName" placeholder="請簽名">
+        </div>
+    </div>
+</div>
+
+<input type="file" id="file1" accept="image/*" style="display:none;" onchange="processImage(event, 1)">
+<input type="file" id="file2" accept="image/*" style="display:none;" onchange="processImage(event, 2)">
+<input type="file" id="file3" accept="image/*" style="display:none;" onchange="processImage(event, 3)">
+<input type="file" id="file4" accept="image/*" style="display:none;" onchange="processImage(event, 4)">
+
+<div class="modal-overlay" id="photoSourceModal" onclick="closePhotoSourceModal()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="text-align: center; max-width: 350px;">
+        <button class="modal-close" onclick="closePhotoSourceModal()">✖</button>
+        <h2 class="modal-title" style="text-align: center;">📸 選擇相片來源</h2>
+        <p style="color: #555; margin-bottom: 20px;">請選擇您要上傳相片的方式：</p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button class="btn btn-auth" style="height: 45px; width: 110px; border-radius: 8px;" onclick="selectPhotoSource('album')">🖼️ 手機相簿</button>
+            <button class="btn btn-save" style="height: 45px; width: 110px; border-radius: 8px;" onclick="selectPhotoSource('camera')">📷 直接拍照</button>
+        </div>
+    </div>
 </div>
 
 <div class="modal-overlay" id="dictModal" onclick="closeDictModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeDictModal()">✖</button>
-        <h2 class="modal-title" style="display: flex; align-items: center; margin-top: 0;">
-            <button id="btnBackToHome" onclick="backToDictHome()" style="margin-right: 15px; font-size: 15px; cursor: pointer; border: 1px solid #ccc; padding: 4px 10px; border-radius: 4px; background: #f0f0f0; display:none;">⬅ 返回</button>
-            <span id="dictCategoryTitle">學習區</span>
-        </h2>
-        <p style="color: #ea4335; font-size: 14px; margin-bottom: 15px; font-weight: bold;">※ 點擊下方分類或句子，系統將自動填入並複製！</p>
-        <div class="phrase-list" id="phraseListContainer"></div>
-    </div>
-</div>
+        
+        <div id="dictHomeLayer">
+            <h2 class="modal-title">💡 智慧幼兒觀察評語詞庫</h2>
+            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">請選擇您想參考的學習區分類：</p>
+            <div class="dict-grid">
+                <button class="dict-cat-btn" onclick="switchDictLayer('語文區')">🗣️ 語文區</button>
+                <button class="dict-cat-btn" onclick="switchDictLayer('美勞區')">🎨 美勞區</button>
+                <button class="dict-cat-btn" onclick="switchDictLayer('益智區')">🧩 益智區</button>
+                <button class="dict-cat-btn" onclick="switchDictLayer('積木區')">🧱 積木區</button>
+                <button class="dict-cat-btn" onclick="switchDictLayer('裝扮區')">🎭 裝扮區</button>
+                <button class="dict-cat-btn" onclick="switchDictLayer('體能區')">🏃‍♂️ 體能區</button>
+            </div>
+        </div>
 
-<div class="modal-overlay" id="photoSourceModal" onclick="closePhotoSourceModal()">
-    <div class="modal-content" onclick="event.stopPropagation()" style="text-align: center; max-width: 350px;">
-        <button class="modal-close" onclick="closePhotoSourceModal()">✖</button>
-        <h2 class="modal-title" style="text-align: center; margin-top: 0;">📸 選擇相片來源</h2>
-        <p style="color: #555; margin-bottom: 20px;">請選擇您要上傳相片的方式：</p>
-        <div style="display: flex; gap: 15px; justify-content: center;">
-            <button class="btn btn-auth" style="background-color: #34a853;" onclick="selectPhotoSource('camera')">📷 開啟相機</button>
-            <button class="btn btn-load" style="background-color: #fbbc05; color: black;" onclick="selectPhotoSource('gallery')">📁 本地相簿</button>
+        <div id="dictListLayer" style="display: none; flex-direction: column; flex-grow: 1; overflow: hidden;">
+            <h2 class="modal-title" style="display: flex; align-items: center;">
+                <button onclick="backToDictHome()" style="margin-right: 15px; font-size: 15px; cursor: pointer; border: 1px solid #ccc; padding: 4px 10px; border-radius: 4px; background: #f0f0f0;">⬅ 返回</button>
+                <span id="dictCategoryTitle">分類名</span>
+            </h2>
+            <p style="color: #ea4335; font-size: 14px; margin-bottom: 15px; font-weight: bold;">※ 點擊下方句子即可自動複製，並可直接貼上至表格中！</p>
+            <div class="phrase-list" id="phraseListContainer"></div>
         </div>
     </div>
 </div>
 
-<div class="toast" id="copyToast">📋 已複製內容至剪貼簿與文字框！</div>
+<div class="modal-overlay" id="infoModal" onclick="closeInfo()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 450px;">
+        <button class="modal-close" onclick="closeInfo()">✖</button>
+        <h2 class="modal-title">ℹ️ 系統使用指南</h2>
+        <div style="overflow-y: auto; font-size: 15px; line-height: 1.6; color: #333;">
+            <p><strong>1. Google 帳號授權：</strong>第一次使用請點擊「Google 登入」。連線後系統會自動在您的雲端硬碟建立資料庫表格與相片庫資料夾。</p>
+            <p><strong>2. 學生檔案下載：</strong>在上方選擇或輸入「座號」，點擊「下載」即可秒速載入該生的文字與相片。</p>
+            <p><strong>3. 智慧詞庫複製：</strong>點擊「智慧詞庫」選擇區域，點擊需要的評語句子後系統會<strong>自動複製</strong>，直接在輸入框內「貼上」即可。</p>
+            <p><strong>4. 自動防錯備份：</strong>點擊「儲存雲端」，資料會以座號覆蓋更新。照片檔名自動包含班級姓名，不用擔心相互蓋檔。</p>
+            <p><strong>5. A4 完美列印：</strong>點擊「輸出 PDF」，系統會隱藏控制列，並精確調整版面以符合 A4 尺寸。建議在列印設定中將<strong>「背景圖形」打勾</strong>以取得最佳效果。</p>
+        </div>
+    </div>
+</div>
+
+<div class="loader-overlay" id="loader">
+    <div class="spinner"></div>
+    <div id="loaderText">讀取中...</div>
+</div>
+<div class="toast" id="copyToast">📋 已成功複製該段評語描述！</div>
 
 <script src="app.js"></script>
 </body>
