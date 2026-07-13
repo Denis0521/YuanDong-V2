@@ -30,7 +30,6 @@
     /* ==================================================== */
     body { background-color: var(--bg-gray); font-family: "標楷體", BiauKai, "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; padding-top: 145px; display: flex; justify-content: center; }
     
-    /* 修正為截圖中的深灰藍色 */
     .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #353745; color: white; padding: 10px; display: flex; justify-content: center; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     
     .top-bar-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; width: 100%; max-width: 700px; margin: 0 auto; }
@@ -51,7 +50,6 @@
         .seat-input { width: 35px; }
     }
     
-    /* 設定漸層按鈕顏色 */
     .btn-auth { background: linear-gradient(to bottom, #4285f4, #2b5cbf); }
     .btn-clear { background: linear-gradient(to bottom, #775c88, #594165); }
     .btn-save { background: linear-gradient(to bottom, #53886f, #3b624f); }
@@ -72,10 +70,16 @@
     .class-col select { width: 75px; } .name-col input { width: 100px; } .seat-col input { width: 45px; } .date-col input { width: 150px; text-align: left; padding-left: 8px;} 
 
     .table-wrapper { width: 100%; }
-    table.main-table { width: 100%; border-collapse: collapse; border: 1px solid var(--border-color); table-layout: fixed; }
-    table.main-table td { border: 1px solid var(--border-color); padding: 0; vertical-align: top; } 
     
-    .checkbox-cell { padding: 4px 10px !important; text-align: left; font-size: 16px; vertical-align: middle !important; height: 38px; }
+    /* 🔥 移除表格外框線 🔥 */
+    table.main-table { width: 100%; border-collapse: collapse; border: none; table-layout: fixed; }
+    /* 🔥 預設所有儲存格無框線 🔥 */
+    table.main-table td { border: none; padding: 0; vertical-align: top; } 
+    /* 🔥 單獨把框線加回照片區塊上 🔥 */
+    td.photo-wrapper-td { border: 1px solid var(--border-color); }
+    
+    /* 🔥 確保學習區勾選欄位無框線 🔥 */
+    .checkbox-cell { padding: 4px 10px !important; text-align: left; font-size: 16px; vertical-align: middle !important; height: 38px; border: none !important; }
     .checkbox-cell input[type="checkbox"] { transform: scale(1.2); margin-right: 4px; vertical-align: middle; cursor: pointer; }
     .checkbox-icon { font-size: 16px; margin-right: 3px; vertical-align: middle; }
 
@@ -104,7 +108,7 @@
     /* 2. 手機螢幕友善介面                                    */
     /* ==================================================== */
     @media screen and (max-width: 800px) {
-        body { padding-top: 145px; background-color: #f0f2f5; } /* 縮小了頂部空白區域 */
+        body { padding-top: 145px; background-color: #f0f2f5; }
         .a4-page { width: 100%; height: auto; box-shadow: none; padding: 15px; margin-bottom: 0; border-radius: 0; margin-top: 10px; }
         h1 { font-size: 20px; line-height: 1.5; margin-bottom: 15px; }
         .title-input { background: #fff; border: 1px solid #ccc !important; }
@@ -113,10 +117,11 @@
         .class-col { width: calc(40% - 6px); } .name-col { width: calc(60% - 6px); } .seat-col { width: calc(32% - 6px); } .date-col { width: calc(68% - 6px); }
         .header-col input, .header-col select { flex-grow: 1; width: 100%; height: 42px; border: 1px solid #ccc !important; background: #fff; text-align: left; padding: 0 10px; font-size: 16px;}
         
-        /* 🔥 利用 CSS 技術使手機排版變為 2x3 而不破壞原本的 table 架構 🔥 */
         table.main-table { display: flex; flex-wrap: wrap; width: 100%; border: none; }
         table.main-table tbody, table.main-table tr { display: contents; }
-        .checkbox-cell { flex: 0 0 50%; max-width: 50%; height: 50px; display: flex; align-items: center; justify-content: flex-start; padding-left: 15px !important; border-bottom: 1px solid #eee; background: #fff; box-sizing: border-box;}
+        
+        /* 🔥 手機版：確保學習區移除底線 🔥 */
+        .checkbox-cell { flex: 0 0 50%; max-width: 50%; height: 50px; display: flex; align-items: center; justify-content: flex-start; padding-left: 15px !important; border: none !important; background: #fff; box-sizing: border-box;}
         .checkbox-cell input[type="checkbox"] { transform: scale(1.5); margin-right: 10px; }
         
         td.photo-wrapper-td { flex: 0 0 100%; max-width: 100%; display: block; margin-top: 20px; border: 2px solid var(--primary-blue) !important; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #fff; box-sizing: border-box; }
@@ -149,13 +154,18 @@
         .header-col input, .header-col select { margin-left: 4px !important; margin-top: 0 !important; font-size: 16px !important; height: auto !important; border: none !important; border-radius: 0 !important; padding: 0 !important; text-align: center !important; background: transparent !important; }
         .class-col select { width: 75px !important; } .name-col input { width: 100px !important; } .seat-col input { width: 45px !important; } .date-col input { width: 150px !important; text-align: left !important; }
         .title-input { background: transparent !important; border: none !important; }
-        table.main-table { display: table !important; width: 100% !important; border-collapse: collapse !important; border: 1px solid var(--border-color) !important; }
+        
+        /* 🔥 PDF列印：移除上方表格外框與勾選區內線 🔥 */
+        table.main-table { display: table !important; width: 100% !important; border-collapse: collapse !important; border: none !important; }
         table.main-table tbody { display: table-row-group !important; }
         table.main-table tr { display: table-row !important; flex-wrap: nowrap !important; width: auto !important; }
-        table.main-table td { display: table-cell !important; border: 1px solid var(--border-color) !important; }
-        .checkbox-cell { width: auto !important; height: 38px !important; display: table-cell !important; padding: 4px 10px !important; }
+        table.main-table td { display: table-cell !important; border: none !important; }
+        .checkbox-cell { width: auto !important; height: 38px !important; display: table-cell !important; padding: 4px 10px !important; border: none !important; }
         .checkbox-cell input[type="checkbox"] { transform: scale(1.2) !important; }
+        
+        /* 🔥 PDF列印：為下方相片區塊保留框線 🔥 */
         td.photo-wrapper-td { display: table-cell !important; width: 50% !important; margin-top: 0 !important; border: 1px solid var(--border-color) !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important; }
+        
         .photo-cell { height: 410px !important; }
         .photo-area { height: 250px !important; background-color: transparent !important; border-bottom: 1px solid var(--border-color) !important; }
         .text-area { height: 160px !important; padding: 6px 8px !important; background-color: transparent !important; gap: 0 !important; }
