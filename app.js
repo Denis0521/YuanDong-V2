@@ -27,7 +27,7 @@ window.addEventListener('load', () => {
         accessToken = savedToken;
         const loginBtn = $('loginBtn');
         loginBtn.innerText = '🟢 自動連線中';
-        loginBtn.style.backgroundColor = '#34a853';
+        loginBtn.style.background = 'linear-gradient(to bottom, #4ca65a, #2f7a3f)';
         
         showLoading('🚀 偵測到有效憑證，正在連接雲端資料庫...');
         initEnvironment().then(() => {
@@ -57,7 +57,7 @@ window.addEventListener('load', () => {
                 
                 const loginBtn = $('loginBtn');
                 loginBtn.innerText = '🟢 已連線雲端';
-                loginBtn.style.backgroundColor = '#34a853';
+                loginBtn.style.background = 'linear-gradient(to bottom, #4ca65a, #2f7a3f)';
                 
                 showLoading('🚀 正在初始化個人雲端資料庫...');
                 await initEnvironment();
@@ -104,7 +104,7 @@ async function fetchGoogleAPI(url, options = {}) {
             accessToken = null;
             const loginBtn = $('loginBtn');
             loginBtn.innerText = '🔵 Google 登入';
-            loginBtn.style.backgroundColor = 'rgba(66, 133, 244, 0.25)';
+            loginBtn.style.background = 'linear-gradient(to bottom, #4285f4, #2b5cbf)';
             alert('⚠️ 您的 Google 登入憑證已過期，請重新點擊上方「Google 登入」按鈕！');
         }
         const errDetails = await response.text();
