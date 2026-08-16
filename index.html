@@ -77,26 +77,18 @@
         font-size: 14px; 
     }
 
-    /* 座號輸入框：調整寬度並隱藏微調箭頭 */
     .seat-input { 
         padding: 2px 4px; 
         font-size: 14px; 
         border-radius: 12px; 
         border: none; 
-        width: 58px; 
+        width: 55px; 
         text-align: center; 
         font-weight: bold; 
         background: rgba(255,255,255,0.9); 
         color: #333; 
         margin-left: 6px; 
         outline: none; 
-        -moz-appearance: textfield; 
-    }
-
-    .seat-input::-webkit-outer-spin-button,
-    .seat-input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
     }
 
     .btn { 
@@ -125,7 +117,7 @@
     @media screen and (max-width: 400px) {
         .btn { font-size: 13px; letter-spacing: -0.5px; }
         .seat-control { font-size: 13px; letter-spacing: -0.5px; }
-        .seat-input { width: 48px; }
+        .seat-input { width: 45px; }
     }
 
     .btn-auth { background: linear-gradient(to bottom, #4285f4, #2b5cbf); }
@@ -199,7 +191,7 @@
 
     .class-col select { width: 75px; } 
     .name-col input { width: 100px; } 
-    .seat-col input { width: 55px; } 
+    .seat-col input { width: 45px; } 
     .date-col input { width: 150px; text-align: left; padding-left: 8px; } 
 
     .table-wrapper { width: 100%; }
@@ -923,7 +915,28 @@
         <button id="loginBtn" class="btn btn-auth btn-half" onclick="handleAuthClick()">🔵 Google 登入</button>
         <div class="seat-control btn-half">
             <span style="margin-right: 4px;">目前座號:</span>
-            <input type="number" id="ctrlSeat" class="seat-input" value="1" min="1" max="99">
+            <select id="ctrlSeat" class="seat-input">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+                <option value="16">16</option>
+                <option value="17">17</option>
+                <option value="18">18</option>
+                <option value="19">19</option>
+                <option value="20">20</option>
+            </select>
         </div>
 
         <button class="btn btn-clear btn-third" onclick="clearForm()">🧹 清除畫面</button>
@@ -942,7 +955,7 @@
     <div class="header-info">
         <div class="header-col class-col">班級: <select id="className"><option value="大班">大班</option><option value="中班">中班</option><option value="小班" selected>小班</option></select></div>
         <div class="header-col name-col">幼生姓名: <input type="text" class="name" id="studentName"></div>
-        <div class="header-col seat-col">座號: <input type="text" class="seat" id="seatNumber" readonly value="1"></div>
+        <div class="header-col seat-col">座號: <input type="text" class="seat" id="seatNumber" readonly></div>
         <div class="header-col date-col">紀錄日期: <input type="text" class="date" id="recordDate" placeholder=" "></div>
     </div>
 
@@ -1056,6 +1069,23 @@
                 <li><strong>重點能力詞庫：</strong>點擊「💡 重點能力」按鈕，可快速瀏覽各區專屬評語，點擊句子即可自動複製。</li>
             </ul>
         </div>
+        <div class="modal-section">
+            <h3>🗂️ 轉存的 PDF 檔案存在手機哪裡？</h3>
+            <ul>
+                <li><strong>蘋果 iOS (iPhone/iPad)：</strong>點擊「🖨️ 轉存 PDF」後，畫面會跳出列印預覽。請點擊預覽畫面下方的「分享」圖示 (或長按預覽圖) ➜ 選擇<strong>「儲存到檔案」</strong>。之後請到手機主畫面尋找內建的<strong>「檔案」APP</strong> (藍色資料夾圖示)，通常會在「我的 iPhone」或「下載項目」中找到。</li>
+                <li><strong>安卓 Android：</strong>點擊「🖨️ 轉存 PDF」後，請在最上方的印表機選單改選為<strong>「儲存為 PDF」</strong>，接著點擊黃色或藍色的 PDF 下載圓形按鈕。之後請到手機主畫面尋找<strong>「檔案管理」或「我的檔案」APP</strong>，檔案通常會躺在「下載 (Downloads)」或「文件」資料夾裡面。</li>
+            </ul>
+        </div>
+        <div class="modal-section">
+            <h3>☁️ 關於 Google 雲端空間與容量說明</h3>
+            <ul>
+                <li>首次授權連線後，系統會自動在您的 Google 雲端硬碟建立兩個專屬檔案（不會弄亂您原有的資料）：
+                    <br>1. <strong>「幼兒學習區紀錄資料庫」</strong>（試算表：儲存所有文字紀錄）
+                    <br>2. <strong>「幼兒相片雲端備份庫」</strong>（資料夾：儲存上傳的照片）
+                </li>
+                <li><strong>不會佔用太多容量：</strong>文字紀錄佔用的空間微乎其微；而您上傳的照片，系統會在背景<strong>自動進行壓縮縮小處理</strong>。即使存了整班的照片，也非常輕量，<strong>完全不用擔心會佔用您 Google 雲端硬碟的寶貴容量喔！</strong></li>
+            </ul>
+        </div>
     </div>
 </div>
 
@@ -1098,171 +1128,6 @@
     </div>
 </div>
 
-<script>
-    // 1. 座號同步邏輯
-    const ctrlSeat = document.getElementById('ctrlSeat');
-    const seatNumber = document.getElementById('seatNumber');
-    
-    if (ctrlSeat && seatNumber) {
-        ctrlSeat.addEventListener('input', function() {
-            seatNumber.value = this.value;
-        });
-    }
-
-    // 2. 彈窗控制
-    function showInfo() { document.getElementById('infoModal').style.display = 'flex'; }
-    function closeInfo() { document.getElementById('infoModal').style.display = 'none'; }
-    
-    function openDictModal() { 
-        document.getElementById('dictView1').style.display = 'block';
-        document.getElementById('dictView2').style.display = 'none';
-        document.getElementById('dictModal').style.display = 'flex'; 
-    }
-    function closeDictModal() { document.getElementById('dictModal').style.display = 'none'; }
-    function backToDictHome() {
-        document.getElementById('dictView1').style.display = 'block';
-        document.getElementById('dictView2').style.display = 'none';
-    }
-
-    let activePhotoIndex = 1;
-    function openPhotoSourceModal(idx) {
-        activePhotoIndex = idx;
-        document.getElementById('photoSourceModal').style.display = 'flex';
-    }
-    function closePhotoSourceModal() {
-        document.getElementById('photoSourceModal').style.display = 'none';
-    }
-
-    function selectPhotoSource(source) {
-        closePhotoSourceModal();
-        const fileInput = document.getElementById('file' + activePhotoIndex);
-        if (!fileInput) return;
-        
-        if (source === 'camera') {
-            fileInput.setAttribute('capture', 'environment');
-        } else {
-            fileInput.removeAttribute('capture');
-        }
-        fileInput.click();
-    }
-
-    // 3. 圖片上傳與刪除處理
-    function processImage(event, idx) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = document.getElementById('img' + idx);
-            const ph = document.getElementById('ph' + idx);
-            const delBtn = document.getElementById('del' + idx);
-
-            img.src = e.target.result;
-            img.style.display = 'block';
-            if (ph) ph.style.display = 'none';
-            if (delBtn) delBtn.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function removeImage(idx, event) {
-        if (event) event.stopPropagation();
-        const img = document.getElementById('img' + idx);
-        const ph = document.getElementById('ph' + idx);
-        const delBtn = document.getElementById('del' + idx);
-        const fileInput = document.getElementById('file' + idx);
-
-        if (img) { img.src = ''; img.style.display = 'none'; }
-        if (ph) ph.style.display = 'block';
-        if (delBtn) delBtn.style.display = 'none';
-        if (fileInput) fileInput.value = '';
-    }
-
-    // 4. 重點能力字典資料
-    const dictPhrases = {
-        '美勞區': [
-            '能正確使用剪刀進行直線與曲線的剪裁。',
-            '能運用撕黏與拼貼技法創作具個人特色的作品。',
-            '能搭配多種色彩塗色，表現視覺豐富感。',
-            '能保持桌面整潔，主動收拾畫具與媒材。'
-        ],
-        '語文區': [
-            '能專注聆聽故事內容並回答簡單問題。',
-            '能運用圖畫與文字表達個人感受與想法。',
-            '能自主閱讀繪本，養成良好看書習慣。',
-            '能嘗試認讀與書寫常見幼兒字詞。'
-        ],
-        '積木區': [
-            '能疊高與延展積木，嘗試建構複雜造型。',
-            '能與同伴合力建構並討論空間佈局。',
-            '能向他人介紹自己的積木作品構造。',
-            '能學習依照種類分類並收納積木。'
-        ],
-        '益智區': [
-            '能獨立完成30片以上的拼圖挑戰。',
-            '能理解棋類規則並具備順序輪流的概念。',
-            '能嘗試解決問題，展現高度專注力。',
-            '能進行簡單的圖形對稱與數量匹配操作。'
-        ],
-        '生活自理區': [
-            '能獨立完成拉鍊與扣鈕扣的動作。',
-            '能主動將鞋子擺放整齊並分類收拾。',
-            '能養成用餐前後洗手的好習慣。',
-            '能學習摺疊衣服與維持個人物品整潔。'
-        ],
-        '組合建構區': [
-            '能靈活運用卡榫與工具進行組裝。',
-            '能觀察範例說明並複製相應的模型。',
-            '能發揮想像力組合出創意的交通工具或機械。',
-            '能嘗試修復結構不穩固的組裝作品。'
-        ]
-    };
-
-    function showCategoryDict(category) {
-        document.getElementById('dictCategoryTitle').innerText = category;
-        const container = document.getElementById('phraseListContainer');
-        container.innerHTML = '';
-
-        const phrases = dictPhrases[category] || [];
-        phrases.forEach(phrase => {
-            const item = document.createElement('div');
-            item.className = 'phrase-item';
-            item.innerText = phrase;
-            item.onclick = function() {
-                navigator.clipboard.writeText(phrase).then(() => {
-                    showToast('✅ 已成功複製重點能力！');
-                });
-            };
-            container.appendChild(item);
-        });
-
-        document.getElementById('dictView1').style.display = 'none';
-        document.getElementById('dictView2').style.display = 'block';
-    }
-
-    function showToast(msg) {
-        const toast = document.getElementById('copyToast');
-        toast.innerText = msg;
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 2000);
-    }
-
-    // 5. 畫面控制按鈕
-    function clearForm() {
-        if (!confirm('確定要清除畫面上所有填寫的內容嗎？')) return;
-        document.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
-        document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
-        for (let i = 1; i <= 4; i++) { removeImage(i, null); }
-        if (ctrlSeat) seatNumber.value = ctrlSeat.value;
-    }
-
-    function printToPDF() {
-        window.print();
-    }
-
-    function handleAuthClick() { alert('請配置您的 Google OAuth Client ID'); }
-    function cloudSave() { alert('請連接備份 API 進行雲端存檔'); }
-    function cloudLoad() { alert('請連接備份 API 進行雲端讀取'); }
-</script>
+<script src="app.js?v=23" defer></script>
 </body>
 </html>
