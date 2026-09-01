@@ -641,7 +641,7 @@ function printToPDF() {
     }, 500);
 }
 
-// 新增 FileReader 工具函數來提高手機端相容性
+// FileReader 工具函數，確保手機端二進位檔案穩定讀取
 const readFileAsArrayBuffer = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -670,37 +670,44 @@ async function mergeLocalPDFs(event) {
     try {
         const mergedPdf = await PDFLib.PDFDocument.create();
         let validPdfCount = 0;
+        let errorMessages = []; // 用來收集有問題的檔案原因，方便排錯
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             
-            // 檢查是否為 PDF 檔案
-            if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-                console.warn(`已略過非 PDF 檔案: ${file.name}`);
-                continue;
-            }
+            // 【修正點】：移除對 file.type 和 file.name 的嚴格檢查。
+            // 因為部分 Android 手機的選取器不會帶副檔名或正確的 MIME 類型，
+            // 這裡我們全部放行，直接交給 PDFLib 處理，它讀得出來就是 PDF。
 
-            // 使用相容性較高的 FileReader 讀取
-            const arrayBuffer = await readFileAsArrayBuffer(file);
-            
-            // 確保檔案有內容
-            if (arrayBuffer.byteLength === 0) {
-                console.warn(`已略過空檔案: ${file.name}`);
-                continue;
-            }
+            try {
+                const arrayBuffer = await readFileAsArrayBuffer(file);
+                
+                if (arrayBuffer.byteLength === 0) {
+                    throw new Error("檔案內容為空");
+                }
 
-            const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
-            const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-            
-            copiedPages.forEach((page) => {
-                mergedPdf.addPage(page);
-            });
-            
-            validPdfCount++;
+                // 【修正點】：加入 ignoreEncryption: true，避免部分手機產生的唯讀 PDF 無法讀取
+                const pdf = await PDFLib.PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                
+                copiedPages.forEach((page) => {
+                    mergedPdf.addPage(page);
+                });
+                
+                validPdfCount++;
+            } catch (fileErr) {
+                // 如果該檔案真的不是 PDF 或是損毀，會在這裡被捕捉，並記錄下來
+                console.warn(`檔案 ${file.name || '未知名稱'} 處理失敗:`, fileErr);
+                errorMessages.push(`「${file.name || '第'+(i+1)+'個檔案'}」無法解析為PDF`);
+            }
         }
 
         if (validPdfCount < 2) {
-            throw new Error('有效的 PDF 檔案不足 2 個，無法合併。請確認選取的檔案皆為正常的 PDF 格式。');
+            let errMsg = '有效的 PDF 檔案不足 2 個，無法合併。';
+            if (errorMessages.length > 0) {
+                errMsg += '\n\n系統略過的檔案原因：\n' + errorMessages.join('\n');
+            }
+            throw new Error(errMsg);
         }
 
         const pdfBytes = await mergedPdf.save();
@@ -718,14 +725,14 @@ async function mergeLocalPDFs(event) {
 
         hideLoading();
         closePdfModal();
-        alert('✅ PDF 合併成功！請至手機的「下載」或「檔案」資料夾查看。');
+        alert(`✅ 成功合併了 ${validPdfCount} 個 PDF 檔案！請至手機的「下載」或「檔案」資料夾查看。`);
     } catch (err) {
         hideLoading();
         console.error(err);
-        alert('❌ PDF 合併失敗：' + err.message);
+        alert('❌ PDF 合併失敗：\n' + err.message);
     }
 
-    event.target.value = '';
+    event.target.value = ''; // 允許使用者重複點選相同檔案
 }
 
 // ==================== 相片來源選擇邏輯 ====================
