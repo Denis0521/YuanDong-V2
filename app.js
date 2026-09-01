@@ -641,6 +641,14 @@ function printToPDF() {
     }, 500);
 }
 
+// 新增 FileReader 工具函數來提高手機端相容性
+const readFileAsArrayBuffer = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error(`無法讀取檔案: ${file.name}`));
+    reader.readAsArrayBuffer(file);
+});
+
 async function mergeLocalPDFs(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -653,43 +661,58 @@ async function mergeLocalPDFs(event) {
 
     if (files.length < 2) {
         alert('請至少選擇 2 個 PDF 檔案進行合併！');
-        event.target.value = ''; // 重置選取狀態
+        event.target.value = '';
         return;
     }
 
     showLoading('📑 正在合併 PDF 檔案，請稍候...');
 
     try {
-        // 建立新的空白 PDF
         const mergedPdf = await PDFLib.PDFDocument.create();
+        let validPdfCount = 0;
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
             
-            // 複製當前 PDF 的所有頁面
+            // 檢查是否為 PDF 檔案
+            if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+                console.warn(`已略過非 PDF 檔案: ${file.name}`);
+                continue;
+            }
+
+            // 使用相容性較高的 FileReader 讀取
+            const arrayBuffer = await readFileAsArrayBuffer(file);
+            
+            // 確保檔案有內容
+            if (arrayBuffer.byteLength === 0) {
+                console.warn(`已略過空檔案: ${file.name}`);
+                continue;
+            }
+
+            const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
             const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
             
-            // 將複製出來的頁面加入到合併檔中
             copiedPages.forEach((page) => {
                 mergedPdf.addPage(page);
             });
+            
+            validPdfCount++;
         }
 
-        // 將合併後的 PDF 儲存為 Bytes
+        if (validPdfCount < 2) {
+            throw new Error('有效的 PDF 檔案不足 2 個，無法合併。請確認選取的檔案皆為正常的 PDF 格式。');
+        }
+
         const pdfBytes = await mergedPdf.save();
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
 
-        // 動態建立下載連結並觸發下載
         const a = document.createElement('a');
         a.href = url;
         a.download = `合併後的紀錄_${new Date().getTime()}.pdf`;
         document.body.appendChild(a);
         a.click();
         
-        // 清理記憶體與元素
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
@@ -702,7 +725,6 @@ async function mergeLocalPDFs(event) {
         alert('❌ PDF 合併失敗：' + err.message);
     }
 
-    // 清空選擇器，允許下一次重複選取相同檔案
     event.target.value = '';
 }
 
@@ -723,7 +745,7 @@ function closePhotoSourceModal() {
 
 // 選擇來源並觸發上傳
 function selectPhotoSource(source) {
-    if (!currentcurrentPhotoIndex) return;
+    if (!currentPhotoIndex) return;
     
     const fileInput = $('file' + currentPhotoIndex);
     
