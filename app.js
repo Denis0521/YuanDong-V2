@@ -621,147 +621,89 @@ function showToast() {
     setTimeout(() => { toast.style.display = 'none'; }, 2000);
 }
 
-// ==================== 列印與 PDF 輸出 ====================
-function openPrintModal() {
-    $('printModal').style.display = 'flex';
+// ==================== 列印與 PDF 輸出與合併 ====================
+function openPdfModal() {
+    $('pdfModal').style.display = 'flex';
 }
 
-function closePrintModal() {
-    $('printModal').style.display = 'none';
+function closePdfModal() {
+    $('pdfModal').style.display = 'none';
 }
 
-// 單頁轉存 (原功能)
-function printSingleToPDF() {
-    closePrintModal();
+function printToPDF() {
+    // 確保列印前網頁標題是正確的姓名
     const studentName = $('studentName').value.trim();
     document.title = studentName ? `${studentName}_學習區紀錄` : "未命名幼生_學習區紀錄";
-    setTimeout(() => { window.print(); }, 500);
+
+    // 延遲確保 iOS/Android 系統的背景層有抓到新標題
+    setTimeout(() => {
+        window.print();
+    }, 500);
 }
 
-// 批次區間轉存 (新功能)
-async function batchPrintToPDF() {
-    const startSeat = parseInt($('printStartSeat').value);
-    const endSeat = parseInt($('printEndSeat').value);
+async function mergeLocalPDFs(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    if (isNaN(startSeat) || isNaN(endSeat) || startSeat > endSeat) {
-        alert('⚠️ 請輸入正確的座號區間！(起始座號不得大於結束座號)');
+    if (typeof PDFLib === 'undefined') {
+        alert('❌ PDF 處理模組尚未載入完成，請檢查網路連線或稍後再試。');
+        event.target.value = '';
         return;
     }
 
-    closePrintModal();
-    showLoading(`🚀 正在從雲端讀取座號 ${startSeat} 到 ${endSeat} 的資料與相片...<br>這可能需要幾分鐘的時間，請稍候。`);
+    if (files.length < 2) {
+        alert('請至少選擇 2 個 PDF 檔案進行合併！');
+        event.target.value = ''; // 重置選取狀態
+        return;
+    }
+
+    showLoading('📑 正在合併 PDF 檔案，請稍候...');
 
     try {
-        if (!spreadsheetId) await initEnvironment();
+        // 建立新的空白 PDF
+        const mergedPdf = await PDFLib.PDFDocument.create();
 
-        // 1. 取得雲端試算表所有資料
-        const readRes = await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E`);
-        const values = readRes.values || [];
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+            
+            // 複製當前 PDF 的所有頁面
+            const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+            
+            // 將複製出來的頁面加入到合併檔中
+            copiedPages.forEach((page) => {
+                mergedPdf.addPage(page);
+            });
+        }
+
+        // 將合併後的 PDF 儲存為 Bytes
+        const pdfBytes = await mergedPdf.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+
+        // 動態建立下載連結並觸發下載
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `合併後的紀錄_${new Date().getTime()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
         
-        const batchContainer = $('batchPrintContainer');
-        batchContainer.innerHTML = '';
-        const formTemplate = $('recordForm');
+        // 清理記憶體與元素
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
-        let foundCount = 0;
-
-        // 2. 迴圈處理座號區間
-        for (let seat = startSeat; seat <= endSeat; seat++) {
-            const targetRow = values.find(row => row[0] == seat);
-            if (!targetRow || !targetRow[4]) continue;
-
-            foundCount++;
-            const targetData = JSON.parse(targetRow[4]);
-            
-            // 複製一份 A4 頁面節點
-            const pageClone = formTemplate.cloneNode(true);
-            pageClone.removeAttribute('id'); // 移除 ID 避免衝突
-            
-            // 填寫文字與數值 (使用 setAttribute 確保列印時渲染正確)
-            const setVal = (id, val) => {
-                const el = pageClone.querySelector(`[id="${id}"]`);
-                if (el) { el.value = val; el.setAttribute('value', val); }
-            };
-
-            setVal('year', targetData.year || '');
-            setVal('term', targetData.term || '');
-            setVal('studentName', targetData.studentName || '');
-            setVal('seatNumber', targetData.seatNumber || '');
-            setVal('recordDate', targetData.recordDate || '');
-            setVal('teacherName', targetData.teacherName || '');
-            
-            // 填寫下拉選單
-            const classSelect = pageClone.querySelector('[id="className"]');
-            if (classSelect && targetData.className) {
-                classSelect.querySelectorAll('option').forEach(opt => {
-                    if (opt.value === targetData.className) opt.setAttribute('selected', 'selected');
-                    else opt.removeAttribute('selected');
-                });
-            }
-            
-            // 填寫 Checkbox
-            for (let c = 1; c <= 6; c++) {
-                const cb = pageClone.querySelector(`[id="cb${c}"]`);
-                if (cb && targetData[`cb${c}`]) {
-                    cb.checked = true;
-                    cb.setAttribute('checked', 'checked');
-                }
-            }
-            
-            // 填寫各區紀錄與載入雲端相片
-            for (let i = 1; i <= 4; i++) {
-                setVal(`pd${i}`, targetData[`pd${i}`] || '');
-                setVal(`pdesc${i}`, targetData[`pdesc${i}`] || '');
-                setVal(`pab${i}`, targetData[`pab${i}`] || '');
-                
-                const imgEl = pageClone.querySelector(`[id="img${i}"]`);
-                const phEl = pageClone.querySelector(`[id="ph${i}"]`);
-                const fileId = targetData[`fileId${i}`];
-                
-                if (fileId) {
-                    try {
-                        const mediaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
-                        if (mediaRes.ok) {
-                            const blob = await mediaRes.blob();
-                            imgEl.src = URL.createObjectURL(blob);
-                            imgEl.style.display = 'block';
-                            phEl.style.display = 'none';
-                        }
-                    } catch (e) {
-                        phEl.innerText = '⚠️ 相片讀取失敗';
-                    }
-                } else {
-                    imgEl.style.display = 'none';
-                }
-            }
-            
-            batchContainer.appendChild(pageClone);
-        }
-
-        if (foundCount === 0) {
-            hideLoading();
-            alert(`⚠️ 在座號 ${startSeat} ~ ${endSeat} 區間內，雲端尚未建立任何存檔資料。`);
-            return;
-        }
-
-        // 3. 切換至批次列印模式並執行列印
-        document.body.classList.add('batch-printing');
-        document.title = `幼兒學習區紀錄_座號${startSeat}至${endSeat}批次輸出`;
         hideLoading();
-        
-        setTimeout(() => {
-            window.print();
-            // 列印結束後恢復原始狀態
-            setTimeout(() => {
-                document.body.classList.remove('batch-printing');
-                batchContainer.innerHTML = '';
-                document.title = '幼兒學習區紀錄';
-            }, 1000);
-        }, 800);
-
+        closePdfModal();
+        alert('✅ PDF 合併成功！請至手機的「下載」或「檔案」資料夾查看。');
     } catch (err) {
         hideLoading();
-        alert("❌ 批次載入失敗：" + err.message);
+        console.error(err);
+        alert('❌ PDF 合併失敗：' + err.message);
     }
+
+    // 清空選擇器，允許下一次重複選取相同檔案
+    event.target.value = '';
 }
 
 // ==================== 相片來源選擇邏輯 ====================
@@ -781,7 +723,7 @@ function closePhotoSourceModal() {
 
 // 選擇來源並觸發上傳
 function selectPhotoSource(source) {
-    if (!currentPhotoIndex) return;
+    if (!currentcurrentPhotoIndex) return;
     
     const fileInput = $('file' + currentPhotoIndex);
     
