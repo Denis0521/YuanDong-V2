@@ -622,15 +622,146 @@ function showToast() {
 }
 
 // ==================== 列印與 PDF 輸出 ====================
-function printToPDF() {
-    // 確保列印前網頁標題是正確的姓名
+function openPrintModal() {
+    $('printModal').style.display = 'flex';
+}
+
+function closePrintModal() {
+    $('printModal').style.display = 'none';
+}
+
+// 單頁轉存 (原功能)
+function printSingleToPDF() {
+    closePrintModal();
     const studentName = $('studentName').value.trim();
     document.title = studentName ? `${studentName}_學習區紀錄` : "未命名幼生_學習區紀錄";
+    setTimeout(() => { window.print(); }, 500);
+}
 
-    // 延遲確保 iOS/Android 系統的背景層有抓到新標題
-    setTimeout(() => {
-        window.print();
-    }, 500);
+// 批次區間轉存 (新功能)
+async function batchPrintToPDF() {
+    const startSeat = parseInt($('printStartSeat').value);
+    const endSeat = parseInt($('printEndSeat').value);
+
+    if (isNaN(startSeat) || isNaN(endSeat) || startSeat > endSeat) {
+        alert('⚠️ 請輸入正確的座號區間！(起始座號不得大於結束座號)');
+        return;
+    }
+
+    closePrintModal();
+    showLoading(`🚀 正在從雲端讀取座號 ${startSeat} 到 ${endSeat} 的資料與相片...<br>這可能需要幾分鐘的時間，請稍候。`);
+
+    try {
+        if (!spreadsheetId) await initEnvironment();
+
+        // 1. 取得雲端試算表所有資料
+        const readRes = await fetchGoogleAPI(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A:E`);
+        const values = readRes.values || [];
+        
+        const batchContainer = $('batchPrintContainer');
+        batchContainer.innerHTML = '';
+        const formTemplate = $('recordForm');
+
+        let foundCount = 0;
+
+        // 2. 迴圈處理座號區間
+        for (let seat = startSeat; seat <= endSeat; seat++) {
+            const targetRow = values.find(row => row[0] == seat);
+            if (!targetRow || !targetRow[4]) continue;
+
+            foundCount++;
+            const targetData = JSON.parse(targetRow[4]);
+            
+            // 複製一份 A4 頁面節點
+            const pageClone = formTemplate.cloneNode(true);
+            pageClone.removeAttribute('id'); // 移除 ID 避免衝突
+            
+            // 填寫文字與數值 (使用 setAttribute 確保列印時渲染正確)
+            const setVal = (id, val) => {
+                const el = pageClone.querySelector(`[id="${id}"]`);
+                if (el) { el.value = val; el.setAttribute('value', val); }
+            };
+
+            setVal('year', targetData.year || '');
+            setVal('term', targetData.term || '');
+            setVal('studentName', targetData.studentName || '');
+            setVal('seatNumber', targetData.seatNumber || '');
+            setVal('recordDate', targetData.recordDate || '');
+            setVal('teacherName', targetData.teacherName || '');
+            
+            // 填寫下拉選單
+            const classSelect = pageClone.querySelector('[id="className"]');
+            if (classSelect && targetData.className) {
+                classSelect.querySelectorAll('option').forEach(opt => {
+                    if (opt.value === targetData.className) opt.setAttribute('selected', 'selected');
+                    else opt.removeAttribute('selected');
+                });
+            }
+            
+            // 填寫 Checkbox
+            for (let c = 1; c <= 6; c++) {
+                const cb = pageClone.querySelector(`[id="cb${c}"]`);
+                if (cb && targetData[`cb${c}`]) {
+                    cb.checked = true;
+                    cb.setAttribute('checked', 'checked');
+                }
+            }
+            
+            // 填寫各區紀錄與載入雲端相片
+            for (let i = 1; i <= 4; i++) {
+                setVal(`pd${i}`, targetData[`pd${i}`] || '');
+                setVal(`pdesc${i}`, targetData[`pdesc${i}`] || '');
+                setVal(`pab${i}`, targetData[`pab${i}`] || '');
+                
+                const imgEl = pageClone.querySelector(`[id="img${i}"]`);
+                const phEl = pageClone.querySelector(`[id="ph${i}"]`);
+                const fileId = targetData[`fileId${i}`];
+                
+                if (fileId) {
+                    try {
+                        const mediaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                        if (mediaRes.ok) {
+                            const blob = await mediaRes.blob();
+                            imgEl.src = URL.createObjectURL(blob);
+                            imgEl.style.display = 'block';
+                            phEl.style.display = 'none';
+                        }
+                    } catch (e) {
+                        phEl.innerText = '⚠️ 相片讀取失敗';
+                    }
+                } else {
+                    imgEl.style.display = 'none';
+                }
+            }
+            
+            batchContainer.appendChild(pageClone);
+        }
+
+        if (foundCount === 0) {
+            hideLoading();
+            alert(`⚠️ 在座號 ${startSeat} ~ ${endSeat} 區間內，雲端尚未建立任何存檔資料。`);
+            return;
+        }
+
+        // 3. 切換至批次列印模式並執行列印
+        document.body.classList.add('batch-printing');
+        document.title = `幼兒學習區紀錄_座號${startSeat}至${endSeat}批次輸出`;
+        hideLoading();
+        
+        setTimeout(() => {
+            window.print();
+            // 列印結束後恢復原始狀態
+            setTimeout(() => {
+                document.body.classList.remove('batch-printing');
+                batchContainer.innerHTML = '';
+                document.title = '幼兒學習區紀錄';
+            }, 1000);
+        }, 800);
+
+    } catch (err) {
+        hideLoading();
+        alert("❌ 批次載入失敗：" + err.message);
+    }
 }
 
 // ==================== 相片來源選擇邏輯 ====================
