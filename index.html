@@ -13,8 +13,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="學習區紀錄">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<!-- 引入 PDF-lib 進行 PDF 合併與操作 -->
+
+<!-- 引入 PDF-lib 與 html2pdf 進行 PDF 合併與操作 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 
 <style>
@@ -50,17 +51,15 @@
         border-bottom: 1px solid #222; 
     }
 
+    /* 調整頂部按鈕版面 */
     .top-bar-row { 
         display: grid; 
-        grid-template-columns: repeat(6, 1fr); 
+        grid-template-columns: repeat(5, 1fr); 
         gap: 8px; 
         width: 100%; 
         max-width: 700px; 
         margin: 0 auto; 
     }
-
-    .btn-half { grid-column: span 3; }
-    .btn-third { grid-column: span 2; }
 
     .seat-control { 
         display: inline-flex; 
@@ -122,10 +121,8 @@
         .seat-input { width: 45px; }
     }
 
-    .btn-auth { background: linear-gradient(to bottom, #4285f4, #2b5cbf); }
     .btn-clear { background: linear-gradient(to bottom, #775c88, #594165); }
     .btn-save { background: linear-gradient(to bottom, #53886f, #3b624f); }
-    .btn-load { background: linear-gradient(to bottom, #9d7b43, #72582f); }
     .btn-print { background: linear-gradient(to bottom, #8e6268, #664349); }
     .btn-dict { background: linear-gradient(to bottom, #a7883a, #786326); } 
     .btn-info { background: linear-gradient(to bottom, #49859a, #305869); } 
@@ -914,40 +911,23 @@
 
 <div class="top-bar no-print">
     <div class="top-bar-row">
-        <button id="loginBtn" class="btn btn-auth btn-half" onclick="handleAuthClick()">🔵 Google 登入</button>
-        <div class="seat-control btn-half">
+        <div class="seat-control">
             <span style="margin-right: 4px;">目前座號:</span>
             <select id="ctrlSeat" class="seat-input">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
-                <option value="13">13</option>
-                <option value="14">14</option>
-                <option value="15">15</option>
-                <option value="16">16</option>
-                <option value="17">17</option>
-                <option value="18">18</option>
-                <option value="19">19</option>
-                <option value="20">20</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+                <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+                <option value="16">16</option><option value="17">17</option><option value="18">18</option>
+                <option value="19">19</option><option value="20">20</option>
             </select>
         </div>
-
-        <button class="btn btn-clear btn-third" onclick="clearForm()">🧹 清除畫面</button>
-        <button class="btn btn-save btn-third" onclick="cloudSave()">☁️ 存檔至雲</button>
-        <button class="btn btn-load btn-third" onclick="cloudLoad()">📥 載入資料</button>
-
-        <button class="btn btn-print btn-third" onclick="openPdfModal()">🖨️ 轉存 PDF</button>
-        <button class="btn btn-dict btn-third" onclick="openDictModal()">💡 重點能力</button>
-        <button class="btn btn-info btn-third" onclick="showInfo()">📖 操作說明</button>
+        <button class="btn btn-clear" onclick="clearForm()">🧹 清除</button>
+        <button class="btn btn-save" onclick="localSave()">💾 儲存</button>
+        <button class="btn btn-print" onclick="openPdfModal()">🖨️ 匯出 PDF</button>
+        <button class="btn btn-dict" onclick="openDictModal()">💡 重點能力</button>
+        <button class="btn btn-info" onclick="showInfo()">📖 說明</button>
     </div>
 </div>
 
@@ -1047,45 +1027,21 @@
 <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeInfo()">✖</button>
-        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：發行版</span></h2>
+        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：本地存儲版</span></h2>
 
         <div class="modal-section">
-            <h3>⚠️ Google 第一次登入常見問題處理</h3>
+            <h3>📝 基本操作與自動防護</h3>
             <ul>
-                <li><strong>彈出視窗遭到封鎖：</strong>第一次點擊登入時，瀏覽器可能會阻擋 Google 登入驗證視窗。請注意網址列右側，設定「永遠允許」本網站顯示彈出式視窗。</li>
-                <li><strong>出現「Google 尚未驗證這個應用程式」：</strong>因本系統為內部專屬私有工具，尚未提交 Google 官方公開發布審核。若出現此安全警告，請點擊左下角微小的<strong>「進階」</strong>連結 ➜ 再點擊<strong>「前往該網站 (不安全)」</strong>即可繼續授權。</li>
-                <li><strong>權限未完整勾選：</strong>驗證授權時，請務必勾選「Google 雲端硬碟 (Drive)」及「Google 試算表 (Sheets)」的存取與權限，否則系統將無法為您順利建立資料庫、存檔或讀取相片。</li>
+                <li><strong>快速切換：</strong>不需要再點擊載入，只要切換上方「座號」選單，系統會自動載入該座號的本機記錄。</li>
+                <li><strong>防呆提醒：</strong>輸入資料後若未點擊「儲存」，在切換座號或退出網頁時，系統會自動彈出「是否保存變更」的提示。</li>
+                <li><strong>存檔位置：</strong>點擊「儲存」後，系統會將資料保留在手機本機端，並下載一份備份檔。為方便管理，請至手機「下載 (Downloads)」資料夾中手動新增一個 <strong>「學習區記錄」</strong> 資料夾，並將檔案移入。</li>
             </ul>
         </div>
         <div class="modal-section">
-            <h3>📱 如何安裝至手機桌面 (免下載APP)</h3>
+            <h3>🗂️ 檔案匯出與合併</h3>
             <ul>
-                <li><strong>蘋果 iOS (Safari)：</strong>點擊瀏覽器下方導覽列的「分享」圖示，選擇「加入主畫面」。</li>
-                <li><strong>安卓 Android (Chrome)：</strong>點擊右上角「三個點」選單，選擇「安裝應用程式」。</li>
-            </ul>
-        </div>
-        <div class="modal-section">
-            <h3>📝 基本操作與重點能力</h3>
-            <ul>
-                <li><strong>載入與儲存：</strong>輸入座號後點擊「📥 載入」可讀取舊資料，完成編輯後點擊「☁️ 存檔」即可同步至雲端。</li>
-                <li><strong>重點能力詞庫：</strong>點擊「💡 重點能力」按鈕，可快速瀏覽各區專屬評語，點擊句子即可自動複製。</li>
-            </ul>
-        </div>
-        <div class="modal-section">
-            <h3>🗂️ 轉存的 PDF 檔案存在手機哪裡？</h3>
-            <ul>
-                <li><strong>蘋果 iOS (iPhone/iPad)：</strong>點擊「🖨️ 轉存 PDF」後，畫面會跳出列印預覽。請點擊預覽畫面下方的「分享」圖示 (或長按預覽圖) ➜ 選擇<strong>「儲存到檔案」</strong>。之後請到手機主畫面尋找內建的<strong>「檔案」APP</strong> (藍色資料夾圖示)，通常會在「我的 iPhone」或「下載項目」中找到。</li>
-                <li><strong>安卓 Android：</strong>點擊「🖨️ 轉存 PDF」後，請在最上方的印表機選單改選為<strong>「儲存為 PDF」</strong>，接著點擊黃色或藍色的 PDF 下載圓形按鈕。之後請到手機主畫面尋找<strong>「檔案管理」或「我的檔案」APP</strong>，檔案通常會躺在「下載 (Downloads)」或「文件」資料夾裡面。</li>
-            </ul>
-        </div>
-        <div class="modal-section">
-            <h3>☁️ 關於 Google 雲端空間與容量說明</h3>
-            <ul>
-                <li>首次授權連線後，系統會自動在您的 Google 雲端硬碟建立兩個專屬檔案（不會弄亂您原有的資料）：
-                    <br>1. <strong>「幼兒學習區紀錄資料庫」</strong>（試算表：儲存所有文字紀錄）
-                    <br>2. <strong>「幼兒相片雲端備份庫」</strong>（資料夾：儲存上傳的照片）
-                </li>
-                <li><strong>不會佔用太多容量：</strong>文字紀錄佔用的空間微乎其微；而您上傳的照片，系統會在背景<strong>自動進行壓縮縮小處理</strong>。即使存了整班的照片，也非常輕量，<strong>完全不用擔心會佔用您 Google 雲端硬碟的寶貴容量喔！</strong></li>
+                <li><strong>單筆匯出：</strong>點擊「🖨️ 匯出 PDF」可匯出當前畫面。為方便管理，請至手機「下載」資料夾中手動新增一個 <strong>「匯出記錄」</strong> 資料夾並將其移入。</li>
+                <li><strong>區間合併：</strong>在 PDF 選單中可輸入起始與結束座號（例如 1 到 5），系統將自動為您生成這幾位學生的紀錄並合併成單一 PDF 檔！</li>
             </ul>
         </div>
     </div>
@@ -1124,7 +1080,7 @@
         <h2 class="modal-title" style="text-align: center;">📸 選擇相片來源</h2>
         <p style="color: #555; margin-bottom: 20px;">請選擇您要上傳相片的方式：</p>
         <div style="display: flex; gap: 15px; justify-content: center;">
-            <button class="btn btn-auth" style="height: 45px; font-size: 16px; border-radius: 8px;" onclick="selectPhotoSource('gallery')">🖼️ 一般上傳</button>
+            <button class="btn btn-save" style="height: 45px; font-size: 16px; border-radius: 8px; background: linear-gradient(to bottom, #4285f4, #2b5cbf);" onclick="selectPhotoSource('gallery')">🖼️ 一般上傳</button>
             <button class="btn btn-save" style="height: 45px; font-size: 16px; border-radius: 8px;" onclick="selectPhotoSource('camera')">📷 開啟相機</button>
         </div>
     </div>
@@ -1133,17 +1089,21 @@
 <div class="modal-overlay" id="pdfModal" onclick="closePdfModal()">
     <div class="modal-content" onclick="event.stopPropagation()" style="text-align: center; max-width: 350px;">
         <button class="modal-close" onclick="closePdfModal()">✖</button>
-        <h2 class="modal-title" style="text-align: center;">🖨️ PDF 輸出與合併</h2>
-        <p style="color: #555; margin-bottom: 20px;">請選擇您要執行的動作：</p>
-        <div style="display: flex; flex-direction: column; gap: 15px; justify-content: center;">
-            <button class="btn btn-print" style="height: 45px; font-size: 16px; border-radius: 8px;" onclick="printToPDF(); closePdfModal();">📄 轉存目前紀錄</button>
-            <button class="btn btn-save" style="height: 45px; font-size: 16px; border-radius: 8px; background: linear-gradient(to bottom, #d84315, #bf360c);" onclick="document.getElementById('pdfUploader').click()">📑 PDF 合併 (多檔)</button>
-            <!-- 隱藏的檔案選擇器，允許選擇手機本地的多個 PDF -->
-            <input type="file" id="pdfUploader" multiple accept="application/pdf" style="display:none;" onchange="mergeLocalPDFs(event)">
+        <h2 class="modal-title" style="text-align: center;">🖨️ PDF 匯出與合併</h2>
+        <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+            <button class="btn btn-print" style="height: 45px; font-size: 16px; width: 100%; border-radius: 8px;" onclick="printSinglePDF()">📄 匯出目前座號</button>
+            <hr style="width: 100%; border: 0.5px solid #eee;">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%;">
+                <span>從座號</span>
+                <input type="number" id="mergeStart" style="width: 50px; text-align: center; font-size: 16px;" min="1" max="20" value="1">
+                <span>到</span>
+                <input type="number" id="mergeEnd" style="width: 50px; text-align: center; font-size: 16px;" min="1" max="20" value="20">
+            </div>
+            <button class="btn btn-save" style="height: 45px; font-size: 16px; width: 100%; border-radius: 8px; background: linear-gradient(to bottom, #d84315, #bf360c);" onclick="mergeSeatPDFs()">📑 合併匯出區間</button>
         </div>
     </div>
 </div>
 
-<script src="app.js?v=24" defer></script>
+<script src="app.js?v=30"></script>
 </body>
 </html>
