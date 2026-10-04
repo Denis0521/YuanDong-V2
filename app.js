@@ -505,26 +505,65 @@ async function dirPermission(request) {
     return false;
 }
 
-async function writeFileTo(name, blob) {
-    const attempt = async (fresh) => {
-        if (fresh) { try { await dirHandle.removeEntry(name); } catch (e) { /* 不存在就略過 */ } }
-        const fh = await dirHandle.getFileHandle(name, { create: true });
-        const w = await fh.createWritable();
-        await w.write(blob);
-        await w.close();
+// 所有寫入排隊執行（避免同一個檔案被同時寫入而互相破壞）
+let writeChain = Promise.resolve();
+function writeFileTo(name, blob) {
+    const run = () => writeFileOnce(name, blob);
+    const p = writeChain.then(run, run);
+    writeChain = p.catch(() => {});
+    return p;
+}
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function writeFileOnce(name, blob) {
+    const buf = await blob.arrayBuffer();
+    let stage = '';
+    const st = (label, fn) => { stage = label; return fn(); };
+    const verify = async () => {
+        const f = await (await dirHandle.getFileHandle(name)).getFile();
+        if (f.size !== buf.byteLength) throw Object.assign(new Error('size'), { name: 'SizeMismatch' });
     };
-    const soft = ['InvalidStateError', 'NotFoundError', 'NoModificationAllowedError'];
-    try {
-        await attempt(false);
-    } catch (e) {
-        if (e && soft.includes(e.name)) {
-            try { await attempt(true); return; } catch (e2) { e = e2; }
+    const strategies = [
+        async () => {   // A：標準寫法
+            const fh = await st('建立', () => dirHandle.getFileHandle(name, { create: true }));
+            const w = await st('開啟', () => fh.createWritable());
+            await st('寫入', () => w.write(blob));
+            await st('關閉', () => w.close());
+        },
+        async () => {   // B：稍等後重新取得檔案，改用位置寫入
+            await sleep(400);
+            const fh = await st('建立', () => dirHandle.getFileHandle(name, { create: true }));
+            const w = await st('開啟', () => fh.createWritable({ keepExistingData: false }));
+            await st('寫入', () => w.write({ type: 'write', position: 0, data: buf }));
+            await st('關閉', () => w.close());
+        },
+        async () => {   // C：清掉殘留檔後重建，先讀取一次更新狀態
+            for (const n of [name, name + '.crswap']) { try { await dirHandle.removeEntry(n); } catch (e) { /* ignore */ } }
+            await sleep(600);
+            const fh = await st('建立', () => dirHandle.getFileHandle(name, { create: true }));
+            await st('讀取', () => fh.getFile());
+            const w = await st('開啟', () => fh.createWritable({ keepExistingData: true }));
+            await st('截斷', () => w.truncate(0));
+            await st('寫入', () => w.write(buf));
+            await st('關閉', () => w.close());
+        },
+    ];
+    const diag = [];
+    for (let i = 0; i < strategies.length; i++) {
+        try {
+            await strategies[i]();
+            await st('驗證', verify);
+            return;
+        } catch (e) {
+            diag.push(`${'ABC'[i]}-${stage}:${(e && e.name) || e}`);
+            if (e && e.name === 'NotAllowedError') break;
         }
-        if (e && (soft.includes(e.name) || e.name === 'NotAllowedError')) {
-            throw new Error('資料夾狀態已變更、被刪除或失去授權。請到「💾 備份」按「設定「學習區」資料夾」重新選一次');
-        }
-        throw e;
     }
+    for (const n of [name, name + '.crswap']) {   // 清掉 0 KB 殘留
+        try { await dirHandle.removeEntry(n); } catch (e) { /* ignore */ }
+    }
+    throw new Error(`寫入失敗 [${diag.join(' ｜ ')}]。請把這行文字截圖給我；也可先改選「文件」裡的資料夾測試。`);
 }
 
 async function buildBackup() {
@@ -538,8 +577,13 @@ function backupBlob(obj) {
     return new Blob([JSON.stringify(obj)], { type: 'application/json' });
 }
 
+let autoRunning = false;
 async function autoBackup() {
-    if (!dirHandle || !backupDirty) return;
+    if (!dirHandle || !backupDirty || autoRunning) return;
+    autoRunning = true;
+    try { await autoBackupInner(); } finally { autoRunning = false; }
+}
+async function autoBackupInner() {
     if (!(await dirPermission(false))) { updateBackupUI(); return; }
     try {
         const obj = await buildBackup();
@@ -553,7 +597,7 @@ async function autoBackup() {
         lastAutoInfo = `最近自動備份：${new Date().toLocaleString()}`;
     } catch (e) {
         console.warn('自動備份失敗', e);
-        lastAutoInfo = '⚠️ 自動備份失敗，請重新設定資料夾';
+        lastAutoInfo = '⚠️ 自動備份失敗：' + ((e && e.message) || e);
     }
     updateBackupUI();
 }
