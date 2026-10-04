@@ -13,7 +13,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="學習區紀錄">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
     :root {
@@ -899,6 +898,532 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
         pointer-events: none; 
     }
+
+/* ---------- 座號頁籤 / 備份 / 輸出 PDF ---------- */
+.seat-row { grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; min-width: 0; }
+.seat-tabs { display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0; padding: 2px 0; scrollbar-width: none; }
+.seat-tabs::-webkit-scrollbar { display: none; }
+.seat-tab { flex: 0 0 auto; min-width: 44px; height: 34px; padding: 0 12px; border-radius: 17px; border: none; background: rgba(255,255,255,.18); color: #fff; font-weight: bold; font-size: 14px; font-family: inherit; white-space: nowrap; cursor: pointer; }
+.seat-tab.active { background: #fff; color: #2f3478; }
+.seat-act { flex: 0 0 auto; width: 36px; height: 34px; border-radius: 17px; border: none; background: rgba(255,255,255,.25); color: #fff; font-size: 16px; cursor: pointer; }
+#printBatch { display: none; }
+.seat-hint { font-size: 14px; line-height: 1.6; margin: 6px 0 10px; }
+.seat-tools { display: flex; gap: 8px; margin-bottom: 8px; }
+.seat-tools button { border: 1px solid #ccd3ee; background: #f3f5ff; border-radius: 14px; padding: 4px 12px; font-size: 14px; cursor: pointer; }
+.seat-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 40vh; overflow-y: auto; }
+.seat-pick-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #f3f5ff; border-radius: 12px; font-size: 15px; }
+.seat-pick-item input { width: 18px; height: 18px; }
+@media print {
+    body.batch-print #printBatch { display: block !important; }
+    body.batch-print #recordForm { display: none !important; }
+}
+</style>
+
+<style id="theme-skin">
+/* =====================================================================
+   主題美化層（Theme Skin）
+   只改外觀：圓潤、立體、配色。不改 HTML 結構、ID、事件與 app.js。
+   表單區的樣式全部放在 @media screen 內，列印 / 轉存 PDF 版面不受影響。
+   ===================================================================== */
+:root {
+    --primary-blue: #4561e8;
+    --bg-gray: #e6ebf8;
+    --ink: #2b2f66;
+    --ink-soft: #6a73a6;
+    --mist: #eef1fb;
+    --line: #d3dbf3;
+    --edge: #bcc6ea;
+}
+
+/* ---------- 頂部工具列 ---------- */
+.top-bar {
+    background: linear-gradient(180deg, #454b9b 0%, #2f3478 55%, #262a63 100%);
+    border-bottom: none;
+    border-radius: 0 0 28px 28px;
+    padding: 10px 12px 15px;
+    box-shadow: 0 10px 28px rgba(31, 34, 92, 0.38),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+}
+.top-bar-row { gap: 10px; }
+
+/* 立體糖果按鈕 */
+.btn {
+    --b1: #6aa0ff; --b2: #3f78ee; --be: #2a58c4;
+    height: 36px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--b1), var(--b2));
+    box-shadow: 0 4px 0 var(--be),
+                0 8px 12px rgba(0, 0, 0, 0.28),
+                inset 0 2px 0 rgba(255, 255, 255, 0.45),
+                inset 0 -3px 5px rgba(0, 0, 0, 0.10);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+.btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn:active {
+    transform: translateY(3px);
+    filter: none;
+    box-shadow: 0 1px 0 var(--be),
+                0 3px 5px rgba(0, 0, 0, 0.25),
+                inset 0 2px 0 rgba(255, 255, 255, 0.35),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.10);
+}
+.btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+.btn-auth  { --b1: #6aa0ff; --b2: #3f78ee; --be: #2a58c4; background: linear-gradient(180deg, var(--b1), var(--b2)); }
+.btn-clear { --b1: #b69af4; --b2: #8760dd; --be: #6140b5; background: linear-gradient(180deg, var(--b1), var(--b2)); }
+.btn-save  { --b1: #4ed3a0; --b2: #25aa7b; --be: #177a58; background: linear-gradient(180deg, var(--b1), var(--b2)); }
+.btn-load  { --b1: #ffbb6b; --b2: #f08f2c; --be: #b96412; background: linear-gradient(180deg, var(--b1), var(--b2)); }
+.btn-print { --b1: #ff909e; --b2: #ea5a70; --be: #b83a52; background: linear-gradient(180deg, var(--b1), var(--b2)); }
+.btn-dict  { --b1: #f4d25c; --b2: #d9a516; --be: #a77b0a; background: linear-gradient(180deg, var(--b1), var(--b2)); }
+.btn-info  { --b1: #4fcbd8; --b2: #1fa2b6; --be: #127888; background: linear-gradient(180deg, var(--b1), var(--b2)); }
+
+/* 登入按鈕：app.js 會用行內樣式切換「已連線 / 未連線」顏色，這裡配合新配色 */
+#loginBtn[style*="76, 166, 90"], #loginBtn[style*="4ca65a" i] {
+    --b1: #86dc72; --b2: #43b04a; --be: #2b8232;
+    background: linear-gradient(180deg, var(--b1), var(--b2)) !important;
+}
+#loginBtn[style*="66, 133, 244"], #loginBtn[style*="4285f4" i] {
+    --b1: #6aa0ff; --b2: #3f78ee; --be: #2a58c4;
+    background: linear-gradient(180deg, var(--b1), var(--b2)) !important;
+}
+
+/* 座號：凹槽 + 浮起的選單 */
+.seat-control {
+    height: 36px;
+    border: none;
+    background: rgba(12, 14, 48, 0.38);
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+.seat-input {
+    height: 26px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffffff, #e6ebfb);
+    color: var(--ink);
+    box-shadow: 0 2px 0 #aab5e2, 0 4px 6px rgba(0, 0, 0, 0.22);
+    text-shadow: none;
+    cursor: pointer;
+}
+.seat-input:focus-visible { outline: 3px solid rgba(255, 255, 255, 0.7); outline-offset: 1px; }
+
+/* =====================================================================
+   表單區（僅螢幕顯示；列印不套用）
+   ===================================================================== */
+@media screen {
+    body {
+        background: linear-gradient(160deg, #dbe4fb 0%, #e8eef9 48%, #efe6fa 100%) fixed;
+        background-color: #e6ebf8;
+        padding-top: 168px;
+    }
+
+    .a4-page {
+        border-radius: 28px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+        box-shadow: 0 2px 4px rgba(45, 55, 130, 0.08),
+                    0 14px 30px rgba(45, 55, 130, 0.16),
+                    0 40px 70px -24px rgba(45, 55, 130, 0.28);
+    }
+
+    h1 { color: var(--ink); }
+
+    /* 輸入框：凹陷的圓角小槽 */
+    .title-input,
+    .header-col input, .header-col select,
+    .tf-row input,
+    .footer-container input {
+        background: var(--mist);
+        color: var(--ink);
+        box-shadow: inset 0 2px 4px rgba(45, 55, 130, 0.16), 0 1px 0 #ffffff;
+    }
+    .title-input { border-radius: 12px; }
+    .header-info { color: var(--ink); }
+    .header-col input, .header-col select { border-radius: 14px; padding: 5px 10px; }
+    .tf-row input { border-radius: 10px; padding: 2px 10px; }
+    .footer-container { color: var(--ink); }
+    .footer-container input { border-radius: 12px; }
+
+    .a4-page input:focus-visible, .a4-page select:focus-visible {
+        outline: 3px solid rgba(69, 97, 232, 0.4) !important;
+        outline-offset: 1px;
+    }
+
+    /* 表格改成分離式，讓每格都能有圓角與浮起效果 */
+    table.main-table {
+        border-collapse: separate;
+        border-spacing: 10px;
+        margin: -10px;
+        width: calc(100% + 20px);
+    }
+
+    /* 學習區勾選：圓角立體標籤 */
+    .checkbox-cell {
+        color: var(--ink);
+        background: linear-gradient(180deg, #ffffff, #eef1fd);
+        border-radius: 18px;
+        box-shadow: 0 3px 0 var(--line),
+                    0 8px 14px rgba(45, 55, 130, 0.12),
+                    inset 0 1px 0 #ffffff;
+        transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+    .checkbox-cell:has(input:checked) {
+        background: linear-gradient(180deg, #e8eeff, #cdd9ff);
+        box-shadow: 0 3px 0 #a3b3ee,
+                    0 8px 14px rgba(45, 55, 130, 0.16),
+                    inset 0 1px 0 #ffffff;
+    }
+    .checkbox-cell input[type="checkbox"] { accent-color: var(--primary-blue); }
+
+    /* 相片卡片：圓角 + 厚度陰影 */
+    table.main-table td.photo-wrapper-td { border: none !important; background: transparent; }
+    .photo-cell {
+        border-radius: 24px;
+        overflow: hidden;
+        background: #ffffff;
+        box-shadow: 0 0 0 2px var(--line),
+                    0 6px 0 0 var(--edge),
+                    0 18px 28px rgba(45, 55, 130, 0.18);
+    }
+    .photo-area {
+        background: linear-gradient(135deg, #f3f6ff, #e9efff);
+        border-bottom: 2px dashed #c3cdf0;
+    }
+    .photo-area:active { background: #dde5fb; }
+    .photo-placeholder { color: var(--ink-soft); font-size: 13px; font-weight: bold; }
+    .photo-placeholder::before {
+        content: "📷";
+        display: block;
+        font-size: 30px;
+        margin-bottom: 4px;
+        filter: drop-shadow(0 3px 3px rgba(45, 55, 130, 0.25));
+    }
+
+    .delete-btn {
+        top: 10px; right: 10px;
+        width: 28px; height: 28px;
+        line-height: 28px;
+        padding: 0;
+        background: linear-gradient(180deg, #ff909e, #e8506a);
+        box-shadow: 0 3px 0 #b3354d,
+                    0 6px 10px rgba(0, 0, 0, 0.25),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .delete-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #b3354d, 0 2px 4px rgba(0, 0, 0, 0.25); }
+
+    .text-area, .text-label { color: var(--ink); }
+    .top-line { border-top: 2px dashed var(--line); }
+
+    .footer-note {
+        padding: 5px 14px;
+        border-radius: 999px;
+        background: #fff3d1;
+        color: #8a5b06;
+        box-shadow: 0 2px 0 #f0d99a;
+    }
+}
+
+/* ---------- 手機版 ---------- */
+@media screen and (max-width: 800px) {
+    body {
+        padding-top: 160px;
+        background: linear-gradient(180deg, #e4eafb, #eef1fb) fixed;
+        background-color: #e9eefb;
+    }
+    .a4-page { background: transparent; box-shadow: none; border-radius: 0; }
+
+    .title-input { background: var(--mist); border: none !important; }
+
+    .header-info .header-col input,
+    .header-info .header-col select {
+        background: #ffffff;
+        border: none !important;
+        border-radius: 16px;
+        box-shadow: inset 0 2px 5px rgba(45, 55, 130, 0.16), 0 0 0 1.5px var(--line);
+    }
+
+    table.main-table { margin: 0; width: 100%; border-spacing: 0; }
+
+    .checkbox-cell {
+        flex: 0 0 calc(50% - 8px);
+        max-width: calc(50% - 8px);
+        margin: 4px;
+        height: 52px;
+        border-radius: 18px;
+    }
+
+    table.main-table td.photo-wrapper-td {
+        flex: 0 0 calc(100% - 8px);
+        max-width: calc(100% - 8px);
+        margin: 18px 4px 4px;
+        border-radius: 24px;
+        overflow: visible;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .photo-area { height: 280px; border-bottom: 2px dashed #c3cdf0; }
+
+    .text-area .tf-row input[type="text"] {
+        border: none !important;
+        border-radius: 14px;
+        background: var(--mist);
+        height: 46px;
+        box-shadow: inset 0 2px 5px rgba(45, 55, 130, 0.14), 0 1px 0 #ffffff;
+    }
+    .footer-container input {
+        border: none !important;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: inset 0 2px 5px rgba(45, 55, 130, 0.16), 0 0 0 1.5px var(--line);
+    }
+    .footer-container .footer-note { justify-content: center; text-align: center; }
+}
+
+/* =====================================================================
+   彈窗 / 提示 / 載入中
+   ===================================================================== */
+.modal-overlay {
+    background: rgba(28, 31, 80, 0.55);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+.modal-content {
+    border-radius: 28px;
+    background: linear-gradient(180deg, #ffffff, #f6f8ff);
+    box-shadow: 0 24px 60px rgba(25, 28, 80, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.6),
+                inset 0 1px 0 #ffffff;
+    font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+.modal-close {
+    top: 14px; right: 14px;
+    width: 34px; height: 34px;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; line-height: 1;
+    color: var(--ink-soft);
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ffffff, #e6ebfb);
+    box-shadow: 0 3px 0 var(--line), 0 5px 8px rgba(45, 55, 130, 0.15);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.modal-close:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+.modal-title {
+    color: var(--ink);
+    border-bottom: 2px solid var(--line);
+    padding-right: 44px;
+}
+.modal-section {
+    background: var(--mist);
+    border-radius: 20px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    box-shadow: inset 0 1px 0 #ffffff, 0 2px 0 var(--line);
+}
+.modal-section h3 { color: var(--ink); }
+.modal-section ul { color: #4a5280; }
+.modal-section li::marker { color: var(--primary-blue); }
+
+.version-tag {
+    background: linear-gradient(180deg, #ffffff, #e3e9fb);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    box-shadow: 0 2px 0 var(--line);
+}
+
+/* 重點能力：六個立體色塊 */
+.dict-grid button {
+    --h: #4561e8; --hl: #dfe6ff; --he: #aebcf2;
+    border: 2px solid var(--hl);
+    border-radius: 22px;
+    background: linear-gradient(180deg, #ffffff, var(--hl));
+    color: var(--h);
+    box-shadow: 0 5px 0 var(--he), 0 10px 16px rgba(45, 55, 130, 0.14);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.2s ease, color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.dict-grid button:hover { background: var(--h); color: #ffffff; transform: translateY(-1px); }
+.dict-grid button:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--he), 0 3px 6px rgba(45, 55, 130, 0.14); }
+.dict-grid button:nth-child(1) { --h: #e2566e; --hl: #ffe3e8; --he: #f1a6b3; }
+.dict-grid button:nth-child(2) { --h: #3f6fe0; --hl: #dfe8ff; --he: #a9bdf0; }
+.dict-grid button:nth-child(3) { --h: #d98a1c; --hl: #ffeccd; --he: #f0c88a; }
+.dict-grid button:nth-child(4) { --h: #7d57d6; --hl: #ece4ff; --he: #c3b0ee; }
+.dict-grid button:nth-child(5) { --h: #1f9d72; --hl: #d9f6ea; --he: #92d8bc; }
+.dict-grid button:nth-child(6) { --h: #1796aa; --hl: #d6f3f7; --he: #8fd3de; }
+
+.phrase-item {
+    background: #ffffff;
+    border: 1.5px solid var(--line);
+    border-radius: 18px;
+    color: var(--ink);
+    box-shadow: 0 3px 0 var(--line);
+    -webkit-tap-highlight-color: transparent;
+}
+.phrase-item:hover { background: #eef2ff; border-color: var(--primary-blue); color: var(--primary-blue); }
+.phrase-item:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+
+/* 詞庫頁的「返回」按鈕與提示（原為行內樣式，需 !important 覆蓋） */
+#dictView2 .modal-title > button {
+    border: none !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #ffffff, #e6ebfb) !important;
+    color: var(--ink);
+    padding: 6px 14px !important;
+    box-shadow: 0 3px 0 var(--line);
+}
+#dictView2 .modal-title > button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+#dictView2 > p {
+    color: #d9485f !important;
+    background: #fff0f2;
+    border-radius: 14px;
+    padding: 8px 12px;
+}
+
+/* 相片來源視窗內的兩顆按鈕（行內樣式為 8px 圓角，改成圓潤） */
+#photoSourceModal .btn {
+    border-radius: 999px !important;
+    height: 48px !important;
+    box-shadow: 0 4px 0 var(--be), 0 8px 14px rgba(45, 55, 130, 0.25),
+                inset 0 2px 0 rgba(255, 255, 255, 0.45), inset 0 -3px 5px rgba(0, 0, 0, 0.10);
+}
+#photoSourceModal .btn:active { box-shadow: 0 1px 0 var(--be), 0 2px 4px rgba(45, 55, 130, 0.25); }
+
+.toast {
+    background: linear-gradient(180deg, #454b9b, #2b2f66);
+    border-radius: 999px;
+    font-weight: bold;
+    box-shadow: 0 4px 0 #1d2050, 0 12px 24px rgba(25, 28, 80, 0.35);
+}
+
+.loader-overlay {
+    background: rgba(25, 28, 70, 0.82);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+.spinner {
+    width: 46px; height: 46px;
+    border: 6px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #6ee0b0;
+    box-shadow: 0 0 18px rgba(110, 224, 176, 0.35);
+}
+#loaderText {
+    padding: 10px 20px;
+    max-width: 86%;
+    line-height: 1.5;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+}
+
+/* =====================================================================
+   PDF 功能選單 / 合併 PDF
+   ===================================================================== */
+.pdf-choice-list { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; padding-bottom: 6px; }
+.pdf-choice {
+    --h: #e2566e; --hl: #ffe3e8; --he: #f1a6b3;
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; padding: 16px 18px; text-align: left;
+    font-family: inherit; cursor: pointer;
+    border: 2px solid var(--hl); border-radius: 24px;
+    background: linear-gradient(180deg, #ffffff, var(--hl));
+    color: var(--h);
+    box-shadow: 0 5px 0 var(--he), 0 10px 16px rgba(45, 55, 130, 0.14);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.pdf-choice-merge { --h: #1796aa; --hl: #d6f3f7; --he: #8fd3de; }
+.pdf-choice:hover { transform: translateY(-1px); }
+.pdf-choice:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--he), 0 3px 6px rgba(45, 55, 130, 0.14); }
+.pdf-choice-icon { font-size: 32px; flex-shrink: 0; filter: drop-shadow(0 3px 3px rgba(45, 55, 130, 0.22)); }
+.pdf-choice-text { display: flex; flex-direction: column; gap: 3px; }
+.pdf-choice-text b { font-size: 19px; }
+.pdf-choice-text small { font-size: 13px; font-weight: normal; color: #5b6490; line-height: 1.4; }
+
+.pdf-merge-title { display: flex; align-items: center; gap: 12px; }
+.pdf-back {
+    font-family: inherit; font-size: 15px; cursor: pointer; color: var(--ink);
+    border: none; border-radius: 999px; padding: 6px 14px;
+    background: linear-gradient(180deg, #ffffff, #e6ebfb);
+    box-shadow: 0 3px 0 var(--line);
+}
+.pdf-back:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+
+.pdf-add-btn, .pdf-merge-btn, .pdf-again-btn {
+    --b1: #6aa0ff; --b2: #3f78ee; --be: #2a58c4;
+    width: 100%; padding: 13px 16px; font-family: inherit; font-size: 16px; font-weight: bold;
+    color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); cursor: pointer;
+    border: none; border-radius: 999px;
+    background: linear-gradient(180deg, var(--b1), var(--b2));
+    box-shadow: 0 4px 0 var(--be), 0 8px 12px rgba(45, 55, 130, 0.25),
+                inset 0 2px 0 rgba(255, 255, 255, 0.45), inset 0 -3px 5px rgba(0, 0, 0, 0.10);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.pdf-merge-btn { --b1: #4ed3a0; --b2: #25aa7b; --be: #177a58; margin-top: 14px; }
+.pdf-again-btn { --b1: #ffbb6b; --b2: #f08f2c; --be: #b96412; font-size: 15px; padding: 11px 12px; }
+.pdf-add-btn:active, .pdf-merge-btn:active, .pdf-again-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--be), 0 3px 5px rgba(45, 55, 130, 0.25);
+}
+.pdf-merge-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 0 4px 0 var(--be); }
+
+.pdf-empty {
+    margin-top: 14px; padding: 16px; text-align: center;
+    font-size: 14px; line-height: 1.6; color: var(--ink-soft);
+    background: var(--mist); border-radius: 20px; border: 2px dashed var(--line);
+}
+.pdf-file-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.pdf-file-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 8px 8px 10px; background: #ffffff;
+    border: 1.5px solid var(--line); border-radius: 18px; box-shadow: 0 3px 0 var(--line);
+}
+.pdf-file-idx {
+    flex: 0 0 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: bold; color: #fff;
+    background: linear-gradient(180deg, #6f87f2, var(--primary-blue));
+    box-shadow: 0 2px 0 #2c43b5;
+}
+.pdf-file-info { flex: 1; min-width: 0; }
+.pdf-file-name { font-size: 14px; font-weight: bold; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-file-size { font-size: 12px; color: var(--ink-soft); }
+.pdf-mini {
+    flex: 0 0 32px; width: 32px; height: 32px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; line-height: 1; color: var(--ink-soft); cursor: pointer;
+    border: none; border-radius: 50%;
+    background: linear-gradient(180deg, #ffffff, #e6ebfb);
+    box-shadow: 0 3px 0 var(--line);
+    -webkit-tap-highlight-color: transparent;
+}
+.pdf-mini:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+.pdf-mini:disabled { opacity: 0.35; cursor: default; transform: none; box-shadow: 0 3px 0 var(--line); }
+.pdf-mini.del { color: #d9485f; }
+
+.pdf-name-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 14px; color: var(--ink); font-weight: bold; }
+.pdf-name-row label { flex-shrink: 0; }
+.pdf-name-row input {
+    flex: 1; min-width: 0; height: 40px; padding: 0 14px;
+    font-family: inherit; font-size: 16px; color: var(--ink);
+    border: none; border-radius: 14px; background: var(--mist);
+    box-shadow: inset 0 2px 4px rgba(45, 55, 130, 0.16), 0 1px 0 #ffffff;
+}
+.pdf-msg { margin-top: 12px; font-size: 14px; line-height: 1.5; border-radius: 14px; padding: 0; }
+.pdf-msg:not(:empty) { padding: 8px 12px; background: var(--mist); color: var(--ink); }
+.pdf-msg.error:not(:empty) { background: #fff0f2; color: #d9485f; }
+.pdf-msg.ok:not(:empty) { background: #e4f8ee; color: #177a58; }
+.pdf-done { display: flex; gap: 10px; margin-top: 14px; }
+.pdf-done .pdf-again-btn { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+}
 </style>
 </head>
 <body>
@@ -912,42 +1437,23 @@
 
 <div class="top-bar no-print">
     <div class="top-bar-row">
-        <button id="loginBtn" class="btn btn-auth btn-half" onclick="handleAuthClick()">🔵 Google 登入</button>
-        <div class="seat-control btn-half">
-            <span style="margin-right: 4px;">目前座號:</span>
-            <select id="ctrlSeat" class="seat-input">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
-                <option value="13">13</option>
-                <option value="14">14</option>
-                <option value="15">15</option>
-                <option value="16">16</option>
-                <option value="17">17</option>
-                <option value="18">18</option>
-                <option value="19">19</option>
-                <option value="20">20</option>
-            </select>
+        <div class="seat-row">
+            <div class="seat-tabs" id="seatTabs"></div>
+            <button type="button" class="seat-act" onclick="addSeat()" title="新增座號頁籤">＋</button>
+            <button type="button" class="seat-act" onclick="deleteSeat()" title="刪除目前座號頁籤">🗑</button>
         </div>
+        <input type="hidden" id="ctrlSeat">
 
-        <button class="btn btn-clear btn-third" onclick="clearForm()">🧹 清除畫面</button>
-        <button class="btn btn-save btn-third" onclick="cloudSave()">☁️ 存檔至雲</button>
-        <button class="btn btn-load btn-third" onclick="cloudLoad()">📥 載入資料</button>
+        <button class="btn btn-clear btn-third" onclick="clearForm()">🧹 清空此頁</button>
+        <button class="btn btn-save btn-third" onclick="openBackupModal()">💾 備份<span id="backupWarn" style="display:none;">⚠️</span></button>
+        <button class="btn btn-print btn-third" onclick="openPdfMenu()">🖨️ 輸出 PDF</button>
 
-        <button class="btn btn-print btn-third" onclick="printToPDF()">🖨️ 轉存 PDF</button>
-        <button class="btn btn-dict btn-third" onclick="openDictModal()">💡 重點能力</button>
-        <button class="btn btn-info btn-third" onclick="showInfo()">📖 操作說明</button>
+        <button class="btn btn-dict btn-half" onclick="openDictModal()">💡 重點能力</button>
+        <button class="btn btn-info btn-half" onclick="showInfo()">📖 操作說明</button>
     </div>
 </div>
+
+<div id="printBatch"></div>
 
 <div class="a4-page" id="recordForm">
     <h1>遠東幼兒園 <input type="text" class="title-input year" id="year" placeholder=" "> 學年度 第 <input type="text" class="title-input term" id="term" placeholder=" "> 學期 幼兒學習區紀錄</h1>
@@ -1045,45 +1551,42 @@
 <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeInfo()">✖</button>
-        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">版本：發行版</span></h2>
+        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">本機版</span></h2>
 
-        <div class="modal-section">
-            <h3>⚠️ Google 第一次登入常見問題處理</h3>
-            <ul>
-                <li><strong>彈出視窗遭到封鎖：</strong>第一次點擊登入時，瀏覽器可能會阻擋 Google 登入驗證視窗。請注意網址列右側，設定「永遠允許」本網站顯示彈出式視窗。</li>
-                <li><strong>出現「Google 尚未驗證這個應用程式」：</strong>因本系統為內部專屬私有工具，尚未提交 Google 官方公開發布審核。若出現此安全警告，請點擊左下角微小的<strong>「進階」</strong>連結 ➜ 再點擊<strong>「前往該網站 (不安全)」</strong>即可繼續授權。</li>
-                <li><strong>權限未完整勾選：</strong>驗證授權時，請務必勾選「Google 雲端硬碟 (Drive)」及「Google 試算表 (Sheets)」的存取與權限，否則系統將無法為您順利建立資料庫、存檔或讀取相片。</li>
-            </ul>
-        </div>
         <div class="modal-section">
             <h3>📱 如何安裝至手機桌面 (免下載APP)</h3>
             <ul>
-                <li><strong>蘋果 iOS (Safari)：</strong>點擊瀏覽器下方導覽列的「分享」圖示，選擇「加入主畫面」。</li>
                 <li><strong>安卓 Android (Chrome)：</strong>點擊右上角「三個點」選單，選擇「安裝應用程式」。</li>
+                <li><strong>蘋果 iOS (Safari)：</strong>點擊下方「分享」圖示，選擇「加入主畫面」。</li>
             </ul>
         </div>
         <div class="modal-section">
-            <h3>📝 基本操作與重點能力</h3>
+            <h3>🗂️ 座號頁籤與自動存檔</h3>
             <ul>
-                <li><strong>載入與儲存：</strong>輸入座號後點擊「📥 載入」可讀取舊資料，完成編輯後點擊「☁️ 存檔」即可同步至雲端。</li>
-                <li><strong>重點能力詞庫：</strong>點擊「💡 重點能力」按鈕，可快速瀏覽各區專屬評語，點擊句子即可自動複製。</li>
+                <li>畫面最上方的每個頁籤就是一個座號，點頁籤即可切換；「＋」新增座號、「🗑」刪除目前座號。</li>
+                <li>所有資料（文字與相片）都存在這支手機裡，<strong>輸入後會自動儲存</strong>，不需要登入，也不需要網路。</li>
             </ul>
         </div>
         <div class="modal-section">
-            <h3>🗂️ 轉存的 PDF 檔案存在手機哪裡？</h3>
+            <h3>💾 備份與還原</h3>
             <ul>
-                <li><strong>蘋果 iOS (iPhone/iPad)：</strong>點擊「🖨️ 轉存 PDF」後，畫面會跳出列印預覽。請點擊預覽畫面下方的「分享」圖示 (或長按預覽圖) ➜ 選擇<strong>「儲存到檔案」</strong>。之後請到手機主畫面尋找內建的<strong>「檔案」APP</strong> (藍色資料夾圖示)，通常會在「我的 iPhone」或「下載項目」中找到。</li>
-                <li><strong>安卓 Android：</strong>點擊「🖨️ 轉存 PDF」後，請在最上方的印表機選單改選為<strong>「儲存為 PDF」</strong>，接著點擊黃色或藍色的 PDF 下載圓形按鈕。之後請到手機主畫面尋找<strong>「檔案管理」或「我的檔案」APP</strong>，檔案通常會躺在「下載 (Downloads)」或「文件」資料夾裡面。</li>
+                <li>手機若清除瀏覽器資料或移除 App，本機資料會一併消失，請務必備份。</li>
+                <li>點「💾 備份」➜「選擇備份資料夾」，挑一個資料夾（建議先在「文件」裡新建「學習區備份」）。之後會<strong>自動備份</strong>到該資料夾內的「備份」子資料夾，保留最近 7 份。</li>
+                <li>「立即備份」可隨時手動備份；「還原備份」選擇備份檔即可恢復。</li>
+                <li>若看到 ⚠️，代表手機要求重新授權資料夾，開啟「備份」視窗按「恢復自動備份」即可。</li>
             </ul>
         </div>
         <div class="modal-section">
-            <h3>☁️ 關於 Google 雲端空間與容量說明</h3>
+            <h3>🖨️ 輸出 PDF</h3>
             <ul>
-                <li>首次授權連線後，系統會自動在您的 Google 雲端硬碟建立兩個專屬檔案（不會弄亂您原有的資料）：
-                    <br>1. <strong>「幼兒學習區紀錄資料庫」</strong>（試算表：儲存所有文字紀錄）
-                    <br>2. <strong>「幼兒相片雲端備份庫」</strong>（資料夾：儲存上傳的照片）
-                </li>
-                <li><strong>不會佔用太多容量：</strong>文字紀錄佔用的空間微乎其微；而您上傳的照片，系統會在背景<strong>自動進行壓縮縮小處理</strong>。即使存了整班的照片，也非常輕量，<strong>完全不用擔心會佔用您 Google 雲端硬碟的寶貴容量喔！</strong></li>
+                <li>點「🖨️ 輸出 PDF」勾選座號。<strong>個別轉出</strong>：一次 1 個座號；<strong>合併輸出</strong>：勾選多個座號合成一份 PDF，不需要另外挑檔案。</li>
+                <li>跳出列印預覽後，把印表機改選「儲存為 PDF」，再按 PDF 下載按鈕，選擇要存的資料夾即可（預設檔名已帶入班級與座號）。</li>
+            </ul>
+        </div>
+        <div class="modal-section">
+            <h3>📝 重點能力詞庫</h3>
+            <ul>
+                <li>點擊「💡 重點能力」可快速瀏覽各區專屬評語，點擊句子即可自動複製。</li>
             </ul>
         </div>
     </div>
@@ -1128,6 +1631,35 @@
     </div>
 </div>
 
-<script src="app.js?v=23" defer></script>
+<div class="modal-overlay" id="pdfMenuModal" onclick="closePdfMenu()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <button class="modal-close" onclick="closePdfMenu()">✖</button>
+        <h2 class="modal-title">🖨️ 輸出 PDF</h2>
+        <div class="seat-hint">勾選座號：<b>個別轉出</b>一次 1 個；<b>合併輸出</b>可多選，合成一份。</div>
+        <div class="seat-tools"><button type="button" onclick="pdfSelectAll(true)">全選</button><button type="button" onclick="pdfSelectAll(false)">全不選</button></div>
+        <div class="seat-pick" id="pdfSeatList"></div>
+        <div class="pdf-msg" id="pdfMsg"></div>
+        <div class="pdf-done">
+            <button class="pdf-again-btn" onclick="exportPdf('single')">📄 個別轉出</button>
+            <button class="pdf-again-btn" onclick="exportPdf('merge')">🔗 合併輸出</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="backupModal" onclick="closeBackupModal()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <button class="modal-close" onclick="closeBackupModal()">✖</button>
+        <h2 class="modal-title">💾 備份與還原</h2>
+        <div class="seat-hint" id="backupStatus"></div>
+        <input type="file" id="restoreInput" accept=".json,application/json" style="display:none;">
+        <button class="pdf-add-btn" onclick="manualBackup()">⬆️ 立即備份</button>
+        <button class="pdf-add-btn" onclick="chooseFolder()" style="margin-top:10px;">📁 選擇備份資料夾（自動備份）</button>
+        <button class="pdf-add-btn" id="restoreAccessBtn" onclick="restoreAutoAccess()" style="margin-top:10px; display:none;">🔓 恢復自動備份</button>
+        <button class="pdf-add-btn" onclick="document.getElementById('restoreInput').click()" style="margin-top:10px;">♻️ 還原備份檔</button>
+        <div class="pdf-msg" id="backupMsg"></div>
+    </div>
+</div>
+
+<script src="app.js?v=25" defer></script>
 </body>
 </html>
