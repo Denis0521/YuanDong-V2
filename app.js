@@ -222,20 +222,31 @@ window.addEventListener('load', async () => {
     });
     window.addEventListener('pagehide', () => { saveNow(); });
 
-    // 第一次點擊畫面：恢復資料夾授權（需要使用者手勢），或引導一次性設定
-    let firstTap = true;
-    document.addEventListener('pointerdown', async () => {
-        if (!firstTap) return;
-        firstTap = false;
+    // 啟動後第一次「點擊/觸控放開」：自動恢復資料夾授權（瀏覽器規定必須有使用者手勢）
+    // 注意：觸控的 pointerdown 不算有效手勢，必須用 pointerup / click，否則 requestPermission 會失敗
+    let permTried = false;
+    let setupHandled = false;
+    const onFirstGesture = async () => {
         if (!FS_OK) return;
         if (dirHandle) {
-            if (!(await dirPermission(false))) { await dirPermission(true); updateBackupUI(); autoBackup(); }
-        } else if (!(await kvGet('setupAsked'))) {
+            if (permTried) return;
+            const o = { mode: 'readwrite' };
+            try {
+                if (await dirHandle.queryPermission(o) === 'granted') { permTried = true; return; }
+                const r = await dirHandle.requestPermission(o);   // 跳出系統授權視窗
+                permTried = true;                                  // 使用者已回應（允許或拒絕）才停止詢問
+                if (r === 'granted') { backupDirty = true; autoBackup(); }
+            } catch (e) { /* 手勢無效時會失敗，下次點擊再試 */ }
+            updateBackupUI();
+        } else if (!setupHandled && !(await kvGet('setupAsked'))) {
+            setupHandled = true;
             await kvSet('setupAsked', true);
             openBackupModal();
             setBackupMsg('👋 首次使用：請按「📁 設定「學習區」資料夾」。在選擇畫面進入 Download ➜「新增資料夾」取名「學習區」➜「使用此資料夾」。只需設定一次，之後備份與 PDF 都會自動存進去。');
         }
-    }, { passive: true });
+    };
+    document.addEventListener('pointerup', onFirstGesture, { passive: true });
+    document.addEventListener('click', onFirstGesture, { passive: true });
 
     autoBackup();
 });
