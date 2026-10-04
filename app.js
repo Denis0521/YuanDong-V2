@@ -490,12 +490,26 @@ async function dirPermission(request) {
     return false;
 }
 
-async function writeFileTo(sub, name, blob) {
-    const dir = await dirHandle.getDirectoryHandle(sub, { create: true });
-    const fh = await dir.getFileHandle(name, { create: true });
-    const w = await fh.createWritable();
-    await w.write(blob);
-    await w.close();
+async function writeFileTo(name, blob) {
+    const attempt = async (fresh) => {
+        if (fresh) { try { await dirHandle.removeEntry(name); } catch (e) { /* 不存在就略過 */ } }
+        const fh = await dirHandle.getFileHandle(name, { create: true });
+        const w = await fh.createWritable();
+        await w.write(blob);
+        await w.close();
+    };
+    const soft = ['InvalidStateError', 'NotFoundError', 'NoModificationAllowedError'];
+    try {
+        await attempt(false);
+    } catch (e) {
+        if (e && soft.includes(e.name)) {
+            try { await attempt(true); return; } catch (e2) { e = e2; }
+        }
+        if (e && (soft.includes(e.name) || e.name === 'NotAllowedError')) {
+            throw new Error('資料夾狀態已變更、被刪除或失去授權。請到「💾 備份」按「設定「學習區」資料夾」重新選一次');
+        }
+        throw e;
+    }
 }
 
 async function buildBackup() {
@@ -514,13 +528,12 @@ async function autoBackup() {
     if (!(await dirPermission(false))) { updateBackupUI(); return; }
     try {
         const obj = await buildBackup();
-        await writeFileTo('備份', `學習區自動備份_${stamp(false)}.json`, backupBlob(obj));
+        await writeFileTo(`學習區自動備份_${stamp(false)}.json`, backupBlob(obj));
         // 只保留最近 7 份自動備份
-        const dir = await dirHandle.getDirectoryHandle('備份', { create: true });
         const names = [];
-        for await (const [n] of dir.entries()) if (n.startsWith('學習區自動備份_')) names.push(n);
+        for await (const [n] of dirHandle.entries()) if (n.startsWith('學習區自動備份_')) names.push(n);
         names.sort();
-        while (names.length > 7) await dir.removeEntry(names.shift());
+        while (names.length > 7) await dirHandle.removeEntry(names.shift());
         backupDirty = false;
         lastAutoInfo = `最近自動備份：${new Date().toLocaleString()}`;
     } catch (e) {
@@ -535,7 +548,7 @@ async function ensureDirAccess() {
     if (dirHandle) return dirPermission(true);
     if (FS_OK && !askedFolder) {
         askedFolder = true;
-        if (confirm('尚未設定備份資料夾。\n要現在選擇一個資料夾嗎？（取消則改用「分享 / 下載」）')) {
+        if (confirm('尚未設定「學習區」資料夾。\n要現在設定嗎？（取消則改用「分享 / 下載」）')) {
             await chooseFolder();
             return !!dirHandle;
         }
@@ -546,14 +559,16 @@ async function ensureDirAccess() {
 async function chooseFolder() {
     if (!FS_OK) { setBackupMsg('此瀏覽器不支援選擇資料夾，備份會改用「分享 / 下載」。', 'error'); return; }
     try {
-        const h = await window.showDirectoryPicker({ id: 'learn-record', mode: 'readwrite' });
+        let h;
+        try { h = await window.showDirectoryPicker({ id: 'learn-record', mode: 'readwrite', startIn: 'downloads' }); }
+        catch (e) { if (e && e.name === 'AbortError') throw e; h = await window.showDirectoryPicker({ mode: 'readwrite' }); }
         dirHandle = h;
         await kvSet('dirHandle', h);
         backupDirty = true;
-        setBackupMsg(`✅ 已設定備份資料夾：${h.name}（會在裡面建立「備份」子資料夾）`, 'ok');
+        setBackupMsg(`✅ 已設定資料夾「${h.name}」：備份與 PDF 都會存到這裡`, 'ok');
         await autoBackup();
     } catch (e) {
-        if (e && e.name !== 'AbortError') setBackupMsg('❌ 這個資料夾不能使用，請先在「文件」裡新建一個資料夾再選它。', 'error');
+        if (e && e.name !== 'AbortError') setBackupMsg('❌ 這個資料夾系統不允許使用（例如「下載」本身）。請在選擇畫面進入 Download ➜ 新增資料夾「學習區」➜ 選它；若仍不行，改在「文件」裡建立「學習區」。', 'error');
     }
     updateBackupUI();
 }
@@ -580,8 +595,8 @@ async function manualBackup() {
     const blob = backupBlob(obj);
     try {
         if (useDir) {
-            await writeFileTo('備份', name, blob);
-            setBackupMsg(`✅ 已備份到「${dirHandle.name}/備份/${name}」`, 'ok');
+            await writeFileTo(name, blob);
+            setBackupMsg(`✅ 已備份到「${dirHandle.name}」：${name}`, 'ok');
             backupDirty = false;
             return;
         }
@@ -694,7 +709,7 @@ function cloneFormSnapshot() {
         } else if (s.tagName === 'TEXTAREA') {
             d.value = s.value; d.textContent = s.value;
         } else if (s.tagName === 'SELECT') {
-            Array.from(d.options).forEach(o => { o.selected = (o.value === s.value); });
+            Array.from(d.options).forEach(o => { o.selected = (o.value === s.value); if (o.selected) o.setAttribute('selected', ''); else o.removeAttribute('selected'); });
         } else {
             d.setAttribute('value', s.value); d.value = s.value;
         }
@@ -702,6 +717,64 @@ function cloneFormSnapshot() {
     c.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
     c.removeAttribute('id');
     return c;
+}
+
+const PDF_LIBS = [
+    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+];
+let pdfLibsPromise = null;
+function loadScript(src) {
+    return new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = res; s.onerror = () => rej(new Error('無法載入 PDF 元件（首次使用需連上網路）'));
+        document.head.appendChild(s);
+    });
+}
+function loadPdfLibs() {
+    if (window.html2canvas && window.jspdf) return Promise.resolve();
+    if (!pdfLibsPromise) pdfLibsPromise = Promise.all(PDF_LIBS.map(loadScript)).catch(e => { pdfLibsPromise = null; throw e; });
+    return pdfLibsPromise;
+}
+
+// 直接產生 PDF 並寫入「學習區」資料夾（版面為截圖，文字不可選取）
+async function renderPdfToFolder(order, fileName) {
+    await loadPdfLibs();
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const css = Array.from(document.querySelectorAll('style')).map(s => s.textContent).join('\n');
+    const fr = document.createElement('iframe');
+    fr.style.cssText = 'position:fixed;left:-12000px;top:0;width:1000px;height:1500px;border:0;';
+    const override = 'body{padding:0!important;margin:0!important;display:block!important;background:#fff!important;}' +
+        '.pdf-render{width:794px!important;max-width:none!important;margin:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;}' +
+        '.delete-btn{display:none!important;}';
+    fr.srcdoc = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><style>${css}</style><style>${override}</style></head><body></body></html>`;
+    document.body.appendChild(fr);
+    try {
+        await new Promise(r => { fr.onload = r; });
+        const doc = fr.contentDocument;
+        for (let i = 0; i < order.length; i++) {
+            setPdfMsg(`⏳ 產生中 (${i + 1}/${order.length})...`);
+            await loadRecordToForm(order[i]);
+            const node = doc.importNode(cloneFormSnapshot(), true);
+            node.classList.add('pdf-render');
+            doc.body.innerHTML = '';
+            doc.body.appendChild(node);
+            await new Promise(r => setTimeout(r, 250));
+            const canvas = await window.html2canvas(node, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+            const img = canvas.toDataURL('image/jpeg', 0.88);
+            if (i > 0) pdf.addPage();
+            const PW = 210, PH = 297;
+            let w = PW, h = canvas.height * PW / canvas.width;
+            if (h > PH) { w = w * PH / h; h = PH; }
+            pdf.addImage(img, 'JPEG', (PW - w) / 2, 0, w, h);
+            canvas.width = 0; canvas.height = 0;
+        }
+    } finally {
+        document.body.removeChild(fr);
+    }
+    const blob = pdf.output('blob');
+    await writeFileTo(fileName + '.pdf', blob);
 }
 
 async function exportPdf(mode) {
@@ -716,28 +789,51 @@ async function exportPdf(mode) {
         setPdfMsg('「合併輸出」請至少勾選 2 個座號。', 'error');
         return;
     }
+    const wantPrint = $('pdfUsePrint').checked;
+    let toFolder = false;
+    if (!wantPrint) {
+        if (!dirHandle) {
+            if (FS_OK && confirm('尚未設定「學習區」資料夾，PDF 無法直接存入。\n要現在設定嗎？（取消則改用系統列印預覽）')) await chooseFolder();
+        }
+        toFolder = !!dirHandle && await dirPermission(true);
+    }
+
     pdfBusy = true;
     const original = currentSeat;
-    const batch = $('printBatch');
-    batch.innerHTML = '';
     try {
         await saveNow();
         const order = seats.filter(s => picked.includes(s));
-        for (const s of order) {
-            await loadRecordToForm(s);
-            batch.appendChild(cloneFormSnapshot());
-        }
-        await loadRecordToForm(original);
-
         const cls = $('className').value || '';
         const first = seatNames[order[0]] || '';
         const name = mode === 'single'
             ? safeName(`${cls}_${order[0]}號_${first || '未命名'}_學習區紀錄`)
             : safeName(`${cls}_學習區紀錄_合併_${order.length}份_${stamp(false)}`);
 
+        if (toFolder) {
+            try {
+                await renderPdfToFolder(order, name);
+                await loadRecordToForm(original);
+                $('pdfMenuModal').style.display = 'none';
+                alert(`✅ 已存入「${dirHandle.name}」：${name}.pdf`);
+            } catch (e) {
+                console.error(e);
+                await loadRecordToForm(original);
+                setPdfMsg('❌ 直接存入失敗：' + (e.message || e) + '。可勾選下方「改用系統列印預覽」再試。', 'error');
+            }
+            return;
+        }
+
+        // 系統列印預覽（版面最精準，但存放位置要在儲存視窗自己選）
+        const batch = $('printBatch');
+        batch.innerHTML = '';
+        for (const s of order) {
+            await loadRecordToForm(s);
+            batch.appendChild(cloneFormSnapshot());
+        }
+        await loadRecordToForm(original);
         $('pdfMenuModal').style.display = 'none';
         document.body.classList.add('batch-print');
-        document.title = name;           // 系統「儲存為 PDF」會以此當預設檔名
+        document.title = name;
         setTimeout(() => window.print(), 400);
     } catch (e) {
         console.error(e);
