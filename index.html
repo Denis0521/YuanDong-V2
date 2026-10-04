@@ -1580,7 +1580,7 @@
             <h3>🖨️ 輸出 PDF</h3>
             <ul>
                 <li>點「🖨️ 輸出 PDF」勾選座號。<strong>個別轉出</strong>：一次 1 個座號；<strong>合併輸出</strong>：勾選多個座號合成一份 PDF，不需要另外挑檔案。</li>
-                <li>已設定「學習區」資料夾時，PDF 會直接存進去（首次使用需連網載入元件；文字為圖片，無法選取）。</li>
+                <li>已設定「學習區」資料夾時，PDF 會直接存進去，版面與列印結果相同，不需連網（文字會是圖片，無法選取）。</li>
                 <li>若勾選「改用系統列印預覽」，則在列印預覽把印表機改選「儲存為 PDF」，自己選存放位置。</li>
             </ul>
         </div>
@@ -1639,8 +1639,9 @@
         <div class="seat-hint">勾選座號：<b>個別轉出</b>一次 1 個；<b>合併輸出</b>可多選，合成一份。</div>
         <div class="seat-tools"><button type="button" onclick="pdfSelectAll(true)">全選</button><button type="button" onclick="pdfSelectAll(false)">全不選</button></div>
         <div class="seat-pick" id="pdfSeatList"></div>
-        <label class="seat-hint" style="display:flex;gap:8px;align-items:center;"><input type="checkbox" id="pdfUsePrint" style="width:18px;height:18px;"> 改用系統列印預覽（版面最精準，存放位置自己選）</label>
+        <label class="seat-hint" style="display:flex;gap:8px;align-items:center;"><input type="checkbox" id="pdfUsePrint" style="width:18px;height:18px;"> 改用系統列印預覽（存放位置自己選）</label>
         <div class="pdf-msg" id="pdfMsg"></div>
+        <button class="pdf-add-btn" onclick="chooseFolder().then(()=>setPdfMsg(dirHandle?'✅ 已設定資料夾：'+dirHandle.name:'','ok'))" style="margin-bottom:10px;">📁 設定「學習區」資料夾</button>
         <div class="pdf-done">
             <button class="pdf-again-btn" onclick="exportPdf('single')">📄 個別轉出</button>
             <button class="pdf-again-btn" onclick="exportPdf('merge')">🔗 合併輸出</button>
@@ -1662,6 +1663,6 @@
     </div>
 </div>
 
-<script src="app.js?v=26" defer></script>
+<script src="app.js?v=27" defer></script>
 </body>
 </html>

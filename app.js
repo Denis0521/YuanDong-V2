@@ -222,6 +222,21 @@ window.addEventListener('load', async () => {
     });
     window.addEventListener('pagehide', () => { saveNow(); });
 
+    // 第一次點擊畫面：恢復資料夾授權（需要使用者手勢），或引導一次性設定
+    let firstTap = true;
+    document.addEventListener('pointerdown', async () => {
+        if (!firstTap) return;
+        firstTap = false;
+        if (!FS_OK) return;
+        if (dirHandle) {
+            if (!(await dirPermission(false))) { await dirPermission(true); updateBackupUI(); autoBackup(); }
+        } else if (!(await kvGet('setupAsked'))) {
+            await kvSet('setupAsked', true);
+            openBackupModal();
+            setBackupMsg('👋 首次使用：請按「📁 設定「學習區」資料夾」。在選擇畫面進入 Download ➜「新增資料夾」取名「學習區」➜「使用此資料夾」。只需設定一次，之後備份與 PDF 都會自動存進去。');
+        }
+    }, { passive: true });
+
     autoBackup();
 });
 
@@ -546,13 +561,6 @@ async function autoBackup() {
 // 在使用者點擊時呼叫（需要手勢才能重新授權資料夾）
 async function ensureDirAccess() {
     if (dirHandle) return dirPermission(true);
-    if (FS_OK && !askedFolder) {
-        askedFolder = true;
-        if (confirm('尚未設定「學習區」資料夾。\n要現在設定嗎？（取消則改用「分享 / 下載」）')) {
-            await chooseFolder();
-            return !!dirHandle;
-        }
-    }
     return false;
 }
 
@@ -590,6 +598,11 @@ function downloadBlob(blob, name) {
 async function manualBackup() {
     setBackupMsg('');
     const useDir = await ensureDirAccess();
+    if (!useDir && FS_OK) {
+        setBackupMsg(dirHandle ? '❌ 資料夾尚未授權，請按下方「🔓 恢復自動備份」' : '請先按上方「📁 設定「學習區」資料夾」（只需設定一次）', 'error');
+        updateBackupUI();
+        return;
+    }
     const obj = await buildBackup();
     const name = `學習區備份_${stamp(true)}.json`;
     const blob = backupBlob(obj);
@@ -719,62 +732,95 @@ function cloneFormSnapshot() {
     return c;
 }
 
-const PDF_LIBS = [
-    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-];
-let pdfLibsPromise = null;
-function loadScript(src) {
-    return new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = src; s.onload = res; s.onerror = () => rej(new Error('無法載入 PDF 元件（首次使用需連上網路）'));
-        document.head.appendChild(s);
-    });
-}
-function loadPdfLibs() {
-    if (window.html2canvas && window.jspdf) return Promise.resolve();
-    if (!pdfLibsPromise) pdfLibsPromise = Promise.all(PDF_LIBS.map(loadScript)).catch(e => { pdfLibsPromise = null; throw e; });
-    return pdfLibsPromise;
+// 取出「列印版」CSS：@media print 規則攤平成一般規則，捨棄 @media screen 規則
+function buildPrintCss() {
+    const conv = (r) => {
+        if (r.type === CSSRule.MEDIA_RULE) {
+            const m = r.media.mediaText || '';
+            if (/print/.test(m)) return Array.from(r.cssRules).map(conv).join('\n');
+            return '';
+        }
+        if (r.type === CSSRule.PAGE_RULE) return '';
+        return r.cssText;
+    };
+    let out = '';
+    for (const sheet of Array.from(document.styleSheets)) {
+        let rules;
+        try { rules = sheet.cssRules; } catch (e) { continue; }
+        for (const r of Array.from(rules)) out += conv(r) + '\n';
+    }
+    return out;
 }
 
-// 直接產生 PDF 並寫入「學習區」資料夾（版面為截圖，文字不可選取）
-async function renderPdfToFolder(order, fileName) {
-    await loadPdfLibs();
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-    const css = Array.from(document.querySelectorAll('style')).map(s => s.textContent).join('\n');
-    const fr = document.createElement('iframe');
-    fr.style.cssText = 'position:fixed;left:-12000px;top:0;width:1000px;height:1500px;border:0;';
-    const override = 'body{padding:0!important;margin:0!important;display:block!important;background:#fff!important;}' +
-        '.pdf-render{width:794px!important;max-width:none!important;margin:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;}' +
-        '.delete-btn{display:none!important;}';
-    fr.srcdoc = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><style>${css}</style><style>${override}</style></head><body></body></html>`;
-    document.body.appendChild(fr);
+const PAGE_W = 794, PAGE_H = 1123;   // A4 @96dpi (210mm x 297mm)
+
+// 用瀏覽器本身把列印版面畫成 JPEG（與列印結果相同的排版）
+async function renderPageToJpeg(node, css, scale) {
+    const xhtml = new XMLSerializer().serializeToString(node);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}" height="${PAGE_H}"><foreignObject x="0" y="0" width="${PAGE_W}" height="${PAGE_H}"><body xmlns="http://www.w3.org/1999/xhtml" style="width:${PAGE_W}px;height:${PAGE_H}px;background:#fff;overflow:hidden;"><style><![CDATA[${css}]]></style>${xhtml}</body></foreignObject></svg>`;
+    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);   // blob: 網址會讓 canvas 被標記為污染
     try {
-        await new Promise(r => { fr.onload = r; });
-        const doc = fr.contentDocument;
-        for (let i = 0; i < order.length; i++) {
-            setPdfMsg(`⏳ 產生中 (${i + 1}/${order.length})...`);
-            await loadRecordToForm(order[i]);
-            const node = doc.importNode(cloneFormSnapshot(), true);
-            node.classList.add('pdf-render');
-            doc.body.innerHTML = '';
-            doc.body.appendChild(node);
-            await new Promise(r => setTimeout(r, 250));
-            const canvas = await window.html2canvas(node, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
-            const img = canvas.toDataURL('image/jpeg', 0.88);
-            if (i > 0) pdf.addPage();
-            const PW = 210, PH = 297;
-            let w = PW, h = canvas.height * PW / canvas.width;
-            if (h > PH) { w = w * PH / h; h = PH; }
-            pdf.addImage(img, 'JPEG', (PW - w) / 2, 0, w, h);
-            canvas.width = 0; canvas.height = 0;
-        }
-    } finally {
-        document.body.removeChild(fr);
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('版面轉圖失敗')); img.src = url; });
+        if (img.decode) { try { await img.decode(); } catch (e) { /* ignore */ } }
+        await new Promise(r => setTimeout(r, 120));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(PAGE_W * scale);
+        canvas.height = Math.round(PAGE_H * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('無法輸出圖片')), 'image/jpeg', 0.92));
+        const out = { bytes: new Uint8Array(await blob.arrayBuffer()), w: canvas.width, h: canvas.height };
+        canvas.width = 0; canvas.height = 0;
+        return out;
+    } finally { /* data URL 不需釋放 */ }
+}
+
+// 最簡 PDF 組裝：每頁一張滿版 A4 JPEG
+function buildPdf(pages) {
+    const enc = new TextEncoder();
+    const chunks = [];
+    let offset = 0;
+    const offs = [];
+    const push = (d) => { const u = typeof d === 'string' ? enc.encode(d) : d; chunks.push(u); offset += u.length; };
+    const n = pages.length;
+    push('%PDF-1.4\n');
+    offs[1] = offset; push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+    const kids = pages.map((_, i) => `${3 + 3 * i} 0 R`).join(' ');
+    offs[2] = offset; push(`2 0 obj\n<< /Type /Pages /Kids [${kids}] /Count ${n} >>\nendobj\n`);
+    pages.forEach((p, i) => {
+        const po = 3 + 3 * i, co = po + 1, io = po + 2;
+        offs[po] = offset;
+        push(`${po} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 ${io} 0 R >> >> /Contents ${co} 0 R >>\nendobj\n`);
+        const content = 'q 595.28 0 0 841.89 0 0 cm /Im0 Do Q';
+        offs[co] = offset;
+        push(`${co} 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`);
+        offs[io] = offset;
+        push(`${io} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.bytes.length} >>\nstream\n`);
+        push(p.bytes);
+        push('\nendstream\nendobj\n');
+    });
+    const total = 3 + 3 * n;
+    const xrefPos = offset;
+    let x = `xref\n0 ${total}\n0000000000 65535 f \n`;
+    for (let i = 1; i < total; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+    push(x + `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF\n`);
+    return new Blob(chunks, { type: 'application/pdf' });
+}
+
+// 直接產生 PDF 並寫入「學習區」資料夾（版面與列印版相同；文字為圖片，無法選取）
+async function renderPdfToFolder(order, fileName) {
+    const css = buildPrintCss();
+    const pages = [];
+    for (let i = 0; i < order.length; i++) {
+        setPdfMsg(`⏳ 產生中 (${i + 1}/${order.length})...`);
+        await loadRecordToForm(order[i]);
+        const node = cloneFormSnapshot();
+        pages.push(await renderPageToJpeg(node, css, 2.5));
     }
-    const blob = pdf.output('blob');
-    await writeFileTo(fileName + '.pdf', blob);
+    await writeFileTo(fileName + '.pdf', buildPdf(pages));
 }
 
 async function exportPdf(mode) {
@@ -792,10 +838,12 @@ async function exportPdf(mode) {
     const wantPrint = $('pdfUsePrint').checked;
     let toFolder = false;
     if (!wantPrint) {
-        if (!dirHandle) {
-            if (FS_OK && confirm('尚未設定「學習區」資料夾，PDF 無法直接存入。\n要現在設定嗎？（取消則改用系統列印預覽）')) await chooseFolder();
+        if (!dirHandle && FS_OK) {
+            setPdfMsg('請先按下方「📁 設定「學習區」資料夾」（只需設定一次）', 'error');
+            return;
         }
         toFolder = !!dirHandle && await dirPermission(true);
+        if (dirHandle && !toFolder) { setPdfMsg('❌ 資料夾尚未授權，請再按一次，或重新設定資料夾', 'error'); return; }
     }
 
     pdfBusy = true;
