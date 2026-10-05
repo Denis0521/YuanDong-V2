@@ -240,22 +240,30 @@ const loadImage = (src) => new Promise((resolve, reject) => {
 });
 
 async function processImage(event, index) {
-    const file = event.target.files[0];
+    const input = event.target;
+    const file = input.files[0];
     if (!file) return;
 
-    const seatNum = $('ctrlSeat').value || '未知';
-    const stuName = $('studentName').value || '未命名';
-    const className = $('className').value || '無班級';
-
-    showLoading('📸 正在壓縮圖片...');
+    showLoading('📸 正在讀取圖片...');
 
     try {
         const dataSrc = await readImageFile(file);
         const img = await loadImage(dataSrc);
+        input.value = '';          // 允許之後再選同一張
+        hideLoading();
+
+        // 先讓使用者裁剪（取消則不變更原本的照片）
+        const area = await openCropper(img, dataSrc);
+        if (!area) return;
+
+        showLoading('📸 正在壓縮圖片...');
+        const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+        const sx = area === 'full' ? 0 : area.sx, sy = area === 'full' ? 0 : area.sy;
+        const sw = area === 'full' ? nw : area.sw, sh = area === 'full' ? nh : area.sh;
 
         const canvas = document.createElement('canvas');
-        const MAX_SIZE = 600; 
-        let { width, height } = img;
+        const MAX_SIZE = 600;
+        let width = sw, height = sh;
 
         if (width > height && width > MAX_SIZE) {
             height *= MAX_SIZE / width;
@@ -265,10 +273,10 @@ async function processImage(event, index) {
             height = MAX_SIZE;
         }
 
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = Math.max(1, Math.round(width));
+        canvas.height = Math.max(1, Math.round(height));
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
         const imgEl = $('img' + index);
@@ -279,7 +287,7 @@ async function processImage(event, index) {
         $('del' + index).style.display = 'block';
 
         // 清理 canvas
-        canvas.width = 0; 
+        canvas.width = 0;
         canvas.height = 0;
 
         hideLoading();
@@ -289,6 +297,97 @@ async function processImage(event, index) {
         alert('❌ 圖片處理失敗：' + err.message);
     }
 }
+
+// ==================== 相片裁剪 ====================
+const CROP_MIN = 30;     // 裁剪框最小邊長（顯示像素）
+let cropState = null;
+
+function openCropper(img, dataSrc) {
+    return new Promise((resolve) => {
+        const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+        const maxW = Math.min(window.innerWidth * 0.94 - 60, 600);
+        const maxH = window.innerHeight * 0.58;
+        const scale = Math.min(maxW / nw, maxH / nh);
+        const dispW = Math.max(60, Math.round(nw * scale));
+        const dispH = Math.max(60, Math.round(nh * scale));
+
+        const stage = $('cropStage');
+        stage.style.width = dispW + 'px';
+        stage.style.height = dispH + 'px';
+        $('cropImg').src = dataSrc;
+
+        cropState = { resolve, nw, nh, dispW, dispH, rect: { x: 0, y: 0, w: dispW, h: dispH }, drag: null };
+        drawCropRect();
+        $('cropModal').style.display = 'flex';
+    });
+}
+
+function drawCropRect() {
+    const r = cropState.rect, el = $('cropRect');
+    el.style.left = r.x + 'px'; el.style.top = r.y + 'px';
+    el.style.width = r.w + 'px'; el.style.height = r.h + 'px';
+}
+
+// ratio = 0 代表全圖；否則套用「置中、最大」的該比例框
+function cropPreset(ratio) {
+    if (!cropState) return;
+    const { dispW, dispH } = cropState;
+    let w = dispW, h = dispH;
+    if (ratio > 0) {
+        if (dispW / dispH > ratio) { w = dispH * ratio; } else { h = dispW / ratio; }
+    }
+    cropState.rect = { x: (dispW - w) / 2, y: (dispH - h) / 2, w, h };
+    drawCropRect();
+}
+
+function cropFinish(action) {
+    if (!cropState) return;
+    const st = cropState;
+    cropState = null;
+    $('cropModal').style.display = 'none';
+    $('cropImg').src = '';
+    if (action === 'cancel') { st.resolve(null); return; }
+    if (action === 'full') { st.resolve('full'); return; }
+    const k = st.nw / st.dispW, kh = st.nh / st.dispH;
+    let sx = Math.round(st.rect.x * k), sy = Math.round(st.rect.y * kh);
+    let sw = Math.round(st.rect.w * k), sh = Math.round(st.rect.h * kh);
+    sx = Math.min(Math.max(0, sx), st.nw - 1); sy = Math.min(Math.max(0, sy), st.nh - 1);
+    sw = Math.max(1, Math.min(sw, st.nw - sx)); sh = Math.max(1, Math.min(sh, st.nh - sy));
+    st.resolve({ sx, sy, sw, sh });
+}
+
+(function initCropper() {
+    const el = $('cropRect');
+    if (!el) return;
+    el.addEventListener('pointerdown', (e) => {
+        if (!cropState) return;
+        const h = e.target.dataset && e.target.dataset.h ? e.target.dataset.h : 'move';
+        e.preventDefault();
+        el.setPointerCapture(e.pointerId);
+        cropState.drag = { h, px: e.clientX, py: e.clientY, r: { ...cropState.rect } };
+    });
+    el.addEventListener('pointermove', (e) => {
+        if (!cropState || !cropState.drag) return;
+        const d = cropState.drag, { dispW, dispH } = cropState;
+        const dx = e.clientX - d.px, dy = e.clientY - d.py;
+        let { x, y, w, h } = d.r;
+        const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+        if (d.h === 'move') {
+            x = clamp(d.r.x + dx, 0, dispW - w);
+            y = clamp(d.r.y + dy, 0, dispH - h);
+        } else {
+            if (d.h.includes('w')) { x = clamp(d.r.x + dx, 0, d.r.x + d.r.w - CROP_MIN); w = d.r.x + d.r.w - x; }
+            if (d.h.includes('e')) { w = clamp(d.r.w + dx, CROP_MIN, dispW - d.r.x); }
+            if (d.h.includes('n')) { y = clamp(d.r.y + dy, 0, d.r.y + d.r.h - CROP_MIN); h = d.r.y + d.r.h - y; }
+            if (d.h.includes('s')) { h = clamp(d.r.h + dy, CROP_MIN, dispH - d.r.y); }
+        }
+        cropState.rect = { x, y, w, h };
+        drawCropRect();
+    });
+    const end = () => { if (cropState) cropState.drag = null; };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+})();
 
 async function removeImage(index, event) {
     event.preventDefault();

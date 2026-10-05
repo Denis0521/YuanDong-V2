@@ -1425,6 +1425,34 @@
     * { transition: none !important; }
 }
 </style>
+<style>
+/* ===== 相片裁剪視窗 ===== */
+#cropModal { z-index: 3500; }
+#cropModal .crop-panel { background:#fff; border-radius:16px; padding:14px; width:min(94vw,640px); max-height:96vh; display:flex; flex-direction:column; align-items:center; gap:10px; box-sizing:border-box; }
+#cropModal .crop-title { font-weight:700; font-size:17px; color:#2d3782; text-align:center; }
+#cropModal .crop-hint { font-size:13px; color:#666; text-align:center; margin-top:-4px; }
+#cropModal .crop-wrap { position:relative; padding:16px; background:#1a1a1a; border-radius:10px; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; }
+#cropModal .crop-stage { position:relative; }
+#cropModal .crop-stage img { display:block; width:100%; height:100%; pointer-events:none; -webkit-user-drag:none; }
+#cropRect { position:absolute; border:2px solid #fff; box-shadow:0 0 0 9999px rgba(0,0,0,.55); box-sizing:border-box; touch-action:none; cursor:move; }
+#cropRect::before, #cropRect::after { content:""; position:absolute; pointer-events:none; }
+#cropRect::before { left:33.33%; right:33.33%; top:0; bottom:0; border-left:1px solid rgba(255,255,255,.5); border-right:1px solid rgba(255,255,255,.5); }
+#cropRect::after { top:33.33%; bottom:33.33%; left:0; right:0; border-top:1px solid rgba(255,255,255,.5); border-bottom:1px solid rgba(255,255,255,.5); }
+#cropRect .ch { position:absolute; width:30px; height:30px; margin:-15px 0 0 -15px; display:flex; align-items:center; justify-content:center; touch-action:none; z-index:2; }
+#cropRect .ch::after { content:""; width:14px; height:14px; background:#fff; border:2px solid #2d3782; border-radius:50%; box-sizing:border-box; }
+#cropRect .ch.e::after, #cropRect .ch.w::after { width:8px; height:22px; border-radius:4px; }
+#cropRect .ch.n::after, #cropRect .ch.s::after { width:22px; height:8px; border-radius:4px; }
+#cropRect .ch[data-h="nw"] { left:0; top:0; } #cropRect .ch[data-h="n"] { left:50%; top:0; } #cropRect .ch[data-h="ne"] { left:100%; top:0; }
+#cropRect .ch[data-h="w"] { left:0; top:50%; } #cropRect .ch[data-h="e"] { left:100%; top:50%; }
+#cropRect .ch[data-h="sw"] { left:0; top:100%; } #cropRect .ch[data-h="s"] { left:50%; top:100%; } #cropRect .ch[data-h="se"] { left:100%; top:100%; }
+#cropModal .crop-ratios { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+#cropModal .crop-ratios button { border:1px solid #c5c9e8; background:#f2f3fb; color:#2d3782; border-radius:16px; padding:6px 14px; font-size:14px; }
+#cropModal .crop-actions { display:flex; gap:8px; width:100%; }
+#cropModal .crop-actions button { flex:1; height:44px; border-radius:8px; border:none; font-size:15px; font-weight:700; }
+#cropModal .crop-actions .c-ok { background:#2d3782; color:#fff; }
+#cropModal .crop-actions .c-full { background:#e6e8f6; color:#2d3782; }
+#cropModal .crop-actions .c-cancel { background:#eee; color:#555; }
+</style>
 </head>
 <body>
 
@@ -1577,6 +1605,13 @@
             </ul>
         </div>
         <div class="modal-section">
+            <h3>✂️ 相片裁剪</h3>
+            <ul>
+                <li>拍照或選好相片後會先出現裁剪視窗：拖曳白框的邊與角，把不想入鏡的部分裁掉，按「確定裁剪」即可；不需要裁剪就按「不裁剪」。</li>
+                <li>下方 1:1、4:3 等按鈕可快速套用常見比例，之後仍可再微調。</li>
+            </ul>
+        </div>
+        <div class="modal-section">
             <h3>🖨️ 輸出 PDF</h3>
             <ul>
                 <li>點「🖨️ 輸出 PDF」勾選座號。<strong>個別轉出</strong>：一次 1 個座號；<strong>合併輸出</strong>：勾選多個座號合成一份 PDF，不需要另外挑檔案。</li>
@@ -1632,6 +1667,35 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="cropModal">
+    <div class="crop-panel">
+        <div class="crop-title">✂️ 裁剪相片</div>
+        <div class="crop-hint">拖曳白框的邊與角，框外的部分會被裁掉；也可拖動整個框</div>
+        <div class="crop-wrap" id="cropWrap">
+            <div class="crop-stage" id="cropStage">
+                <img id="cropImg" alt="">
+                <div id="cropRect">
+                    <span class="ch nw" data-h="nw"></span><span class="ch n" data-h="n"></span><span class="ch ne" data-h="ne"></span>
+                    <span class="ch w" data-h="w"></span><span class="ch e" data-h="e"></span>
+                    <span class="ch sw" data-h="sw"></span><span class="ch s" data-h="s"></span><span class="ch se" data-h="se"></span>
+                </div>
+            </div>
+        </div>
+        <div class="crop-ratios">
+            <button type="button" onclick="cropPreset(0)">全圖</button>
+            <button type="button" onclick="cropPreset(1)">1:1</button>
+            <button type="button" onclick="cropPreset(4/3)">4:3</button>
+            <button type="button" onclick="cropPreset(3/4)">3:4</button>
+            <button type="button" onclick="cropPreset(16/9)">16:9</button>
+        </div>
+        <div class="crop-actions">
+            <button type="button" class="c-cancel" onclick="cropFinish('cancel')">取消</button>
+            <button type="button" class="c-full" onclick="cropFinish('full')">不裁剪</button>
+            <button type="button" class="c-ok" onclick="cropFinish('ok')">✅ 確定裁剪</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="pdfMenuModal" onclick="closePdfMenu()">
     <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 480px;">
         <button class="modal-close" onclick="closePdfMenu()">✖</button>
@@ -1661,6 +1725,6 @@
     </div>
 </div>
 
-<script src="app.js?v=30" defer></script>
+<script src="app.js?v=31" defer></script>
 </body>
 </html>
