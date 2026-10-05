@@ -1445,7 +1445,7 @@
         <input type="hidden" id="ctrlSeat">
 
         <button class="btn btn-clear btn-third" onclick="clearForm()">🧹 清空此頁</button>
-        <button class="btn btn-save btn-third" onclick="openBackupModal()">💾 備份<span id="backupWarn" style="display:none;">⚠️</span></button>
+        <button class="btn btn-save btn-third" onclick="openBackupModal()">💾 備份</button>
         <button class="btn btn-print btn-third" onclick="openPdfMenu()">🖨️ 輸出 PDF</button>
 
         <button class="btn btn-dict btn-half" onclick="openDictModal()">💡 重點能力</button>
@@ -1571,16 +1571,16 @@
             <h3>💾 備份與還原</h3>
             <ul>
                 <li>手機若清除瀏覽器資料或移除 App，本機資料會一併消失，請務必備份。</li>
-                <li>點「💾 備份」➜「設定「學習區」資料夾」：在選擇畫面進入 <strong>Download</strong>，按「新增資料夾」取名「學習區」，再按「使用此資料夾」。之後手動備份、自動備份（保留最近 7 份）與 PDF 都會存到這裡。</li>
-                <li>「立即備份」可隨時手動備份；「還原備份」選擇備份檔即可恢復。</li>
-                <li>若看到 ⚠️，代表手機要求重新授權資料夾，開啟「備份」視窗按「恢復自動備份」即可。</li>
+                <li>自動備份：停止編輯約 30 秒後，在 App 內保留最近 <strong>2 份</strong>並輪流覆寫，不需任何授權。但它和資料存在同一處，清除瀏覽器資料時會一起消失。</li>
+                <li>「立即備份」會把備份檔直接下載到手機「下載」資料夾，請定期按；重複下載的檔名會自動加 (1)，可自行刪除舊檔。</li>
+                <li>「還原備份檔」選擇備份檔即可恢復；也可在備份視窗直接點「還原自動備份」。</li>
             </ul>
         </div>
         <div class="modal-section">
             <h3>🖨️ 輸出 PDF</h3>
             <ul>
                 <li>點「🖨️ 輸出 PDF」勾選座號。<strong>個別轉出</strong>：一次 1 個座號；<strong>合併輸出</strong>：勾選多個座號合成一份 PDF，不需要另外挑檔案。</li>
-                <li>已設定「學習區」資料夾時，PDF 會直接存進去，版面與列印結果相同，不需連網（文字會是圖片，無法選取）。</li>
+                <li>PDF 會直接下載到手機「下載」資料夾，版面與列印結果相同，不需連網（文字會是圖片，無法選取）。</li>
                 <li>若勾選「改用系統列印預覽」，則在列印預覽把印表機改選「儲存為 PDF」，自己選存放位置。</li>
             </ul>
         </div>
@@ -1641,7 +1641,6 @@
         <div class="seat-pick" id="pdfSeatList"></div>
         <label class="seat-hint" style="display:flex;gap:8px;align-items:center;"><input type="checkbox" id="pdfUsePrint" style="width:18px;height:18px;"> 改用系統列印預覽（存放位置自己選）</label>
         <div class="pdf-msg" id="pdfMsg"></div>
-        <button class="pdf-add-btn" onclick="chooseFolder().then(()=>setPdfMsg(dirHandle?'✅ 已設定資料夾：'+dirHandle.name:'','ok'))" style="margin-bottom:10px;">📁 設定「學習區」資料夾</button>
         <div class="pdf-done">
             <button class="pdf-again-btn" onclick="exportPdf('single')">📄 個別轉出</button>
             <button class="pdf-again-btn" onclick="exportPdf('merge')">🔗 合併輸出</button>
@@ -1656,13 +1655,12 @@
         <div class="seat-hint" id="backupStatus"></div>
         <input type="file" id="restoreInput" accept=".json,application/json" style="display:none;">
         <button class="pdf-add-btn" onclick="manualBackup()">⬆️ 立即備份</button>
-        <button class="pdf-add-btn" onclick="chooseFolder()" style="margin-top:10px;">📁 設定「學習區」資料夾</button>
-        <button class="pdf-add-btn" id="restoreAccessBtn" onclick="restoreAutoAccess()" style="margin-top:10px; display:none;">🔓 恢復自動備份</button>
         <button class="pdf-add-btn" onclick="document.getElementById('restoreInput').click()" style="margin-top:10px;">♻️ 還原備份檔</button>
+        <div id="autoSlotBox"></div>
         <div class="pdf-msg" id="backupMsg"></div>
     </div>
 </div>
 
-<script src="app.js?v=28" defer></script>
+<script src="app.js?v=29" defer></script>
 </body>
 </html>

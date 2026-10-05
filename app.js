@@ -196,7 +196,6 @@ window.addEventListener('load', async () => {
         currentSeat = seats.includes(last) ? last : seats[0];
         await loadRecordToForm(currentSeat);
         renderTabs();
-        dirHandle = (await kvGet('dirHandle')) || null;
     } catch (err) {
         console.error(err);
         alert('❌ 無法開啟本機資料庫：' + (err && err.message ? err.message : err));
@@ -221,32 +220,6 @@ window.addEventListener('load', async () => {
         if (document.visibilityState === 'hidden') { saveNow(); autoBackup(); }
     });
     window.addEventListener('pagehide', () => { saveNow(); });
-
-    // 啟動後第一次「點擊/觸控放開」：自動恢復資料夾授權（瀏覽器規定必須有使用者手勢）
-    // 注意：觸控的 pointerdown 不算有效手勢，必須用 pointerup / click，否則 requestPermission 會失敗
-    let permTried = false;
-    let setupHandled = false;
-    const onFirstGesture = async () => {
-        if (!FS_OK) return;
-        if (dirHandle) {
-            if (permTried) return;
-            const o = { mode: 'readwrite' };
-            try {
-                if (await dirHandle.queryPermission(o) === 'granted') { permTried = true; return; }
-                const r = await dirHandle.requestPermission(o);   // 跳出系統授權視窗
-                permTried = true;                                  // 使用者已回應（允許或拒絕）才停止詢問
-                if (r === 'granted') { backupDirty = true; autoBackup(); }
-            } catch (e) { /* 手勢無效時會失敗，下次點擊再試 */ }
-            updateBackupUI();
-        } else if (!setupHandled && !(await kvGet('setupAsked'))) {
-            setupHandled = true;
-            await kvSet('setupAsked', true);
-            openBackupModal();
-            setBackupMsg('👋 首次使用：請按「📁 設定「學習區」資料夾」。在選擇畫面進入 Download ➜「新增資料夾」取名「學習區」➜「使用此資料夾」。只需設定一次，之後備份與 PDF 都會自動存進去。');
-        }
-    };
-    document.addEventListener('pointerup', onFirstGesture, { passive: true });
-    document.addEventListener('click', onFirstGesture, { passive: true });
 
     autoBackup();
 });
@@ -485,11 +458,8 @@ function showToast() {
 
 
 // ==================== 備份 / 還原 / 自動備份 ====================
-const FS_OK = 'showDirectoryPicker' in window;
-let dirHandle = null;
 let backupDirty = false;
 let autoTimer = null;
-let askedFolder = false;
 let lastAutoInfo = '';
 
 function pad(n) { return String(n).padStart(2, '0'); }
@@ -506,77 +476,6 @@ function markChanged() {
     autoTimer = setTimeout(() => autoBackup(), 30000);   // 停止編輯 30 秒後自動備份
 }
 
-async function dirPermission(request) {
-    if (!dirHandle) return false;
-    const o = { mode: 'readwrite' };
-    try {
-        if (await dirHandle.queryPermission(o) === 'granted') return true;
-        if (request && await dirHandle.requestPermission(o) === 'granted') return true;
-    } catch (e) { /* ignore */ }
-    return false;
-}
-
-// 所有寫入排隊執行（避免同一個檔案被同時寫入而互相破壞）
-let writeChain = Promise.resolve();
-function writeFileTo(name, blob) {
-    const run = () => writeFileOnce(name, blob);
-    const p = writeChain.then(run, run);
-    writeChain = p.catch(() => {});
-    return p;
-}
-
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-async function writeFileOnce(name, blob) {
-    const buf = await blob.arrayBuffer();
-    let stage = '';
-    const st = (label, fn) => { stage = label; return fn(); };
-    const verify = async () => {
-        const f = await (await dirHandle.getFileHandle(name)).getFile();
-        if (f.size !== buf.byteLength) throw Object.assign(new Error('size'), { name: 'SizeMismatch' });
-    };
-    const strategies = [
-        async () => {   // A：標準寫法
-            const fh = await st('建立', () => dirHandle.getFileHandle(name, { create: true }));
-            const w = await st('開啟', () => fh.createWritable());
-            await st('寫入', () => w.write(blob));
-            await st('關閉', () => w.close());
-        },
-        async () => {   // B：稍等後重新取得檔案，改用位置寫入
-            await sleep(400);
-            const fh = await st('建立', () => dirHandle.getFileHandle(name, { create: true }));
-            const w = await st('開啟', () => fh.createWritable({ keepExistingData: false }));
-            await st('寫入', () => w.write({ type: 'write', position: 0, data: buf }));
-            await st('關閉', () => w.close());
-        },
-        async () => {   // C：清掉殘留檔後重建，先讀取一次更新狀態
-            for (const n of [name, name + '.crswap']) { try { await dirHandle.removeEntry(n); } catch (e) { /* ignore */ } }
-            await sleep(600);
-            const fh = await st('建立', () => dirHandle.getFileHandle(name, { create: true }));
-            await st('讀取', () => fh.getFile());
-            const w = await st('開啟', () => fh.createWritable({ keepExistingData: true }));
-            await st('截斷', () => w.truncate(0));
-            await st('寫入', () => w.write(buf));
-            await st('關閉', () => w.close());
-        },
-    ];
-    const diag = [];
-    for (let i = 0; i < strategies.length; i++) {
-        try {
-            await strategies[i]();
-            await st('驗證', verify);
-            return;
-        } catch (e) {
-            diag.push(`${'ABC'[i]}-${stage}:${(e && e.name) || e}`);
-            if (e && e.name === 'NotAllowedError') break;
-        }
-    }
-    for (const n of [name, name + '.crswap']) {   // 清掉 0 KB 殘留
-        try { await dirHandle.removeEntry(n); } catch (e) { /* ignore */ }
-    }
-    throw new Error(`寫入失敗 [${diag.join(' ｜ ')}]。請把這行文字截圖給我；也可先改選「文件」裡的資料夾測試。`);
-}
-
 async function buildBackup() {
     await saveNow();
     const records = {};
@@ -588,22 +487,18 @@ function backupBlob(obj) {
     return new Blob([JSON.stringify(obj)], { type: 'application/json' });
 }
 
+// ---- 自動備份：App 內只留 2 份，輪流覆寫（不需任何授權）----
 let autoRunning = false;
 async function autoBackup() {
-    if (!dirHandle || !backupDirty || autoRunning) return;
+    if (!backupDirty || autoRunning) return;
     autoRunning = true;
-    try { await autoBackupInner(); } finally { autoRunning = false; }
-}
-async function autoBackupInner() {
-    if (!(await dirPermission(false))) { updateBackupUI(); return; }
     try {
         const obj = await buildBackup();
-        await writeFileTo(`學習區自動備份_${stamp(false)}.json`, backupBlob(obj));
-        // 只保留最近 7 份自動備份
-        const names = [];
-        for await (const [n] of dirHandle.entries()) if (n.startsWith('學習區自動備份_')) names.push(n);
-        names.sort();
-        while (names.length > 7) await dirHandle.removeEntry(names.shift());
+        const slots = [await kvGet('autoBak0'), await kvGet('autoBak1')];
+        // 覆寫較舊（或空）的那一份
+        const t = (x) => (x && x.exportedAt) ? Date.parse(x.exportedAt) : 0;
+        const idx = t(slots[0]) <= t(slots[1]) ? 0 : 1;
+        await kvSet('autoBak' + idx, obj);
         backupDirty = false;
         lastAutoInfo = `最近自動備份：${new Date().toLocaleString()}`;
     } catch (e) {
@@ -611,35 +506,7 @@ async function autoBackupInner() {
         lastAutoInfo = '⚠️ 自動備份失敗：' + ((e && e.message) || e);
     }
     updateBackupUI();
-}
-
-// 在使用者點擊時呼叫（需要手勢才能重新授權資料夾）
-async function ensureDirAccess() {
-    if (dirHandle) return dirPermission(true);
-    return false;
-}
-
-async function chooseFolder() {
-    if (!FS_OK) { setBackupMsg('此瀏覽器不支援選擇資料夾，備份會改用「分享 / 下載」。', 'error'); return; }
-    try {
-        let h;
-        try { h = await window.showDirectoryPicker({ id: 'learn-record', mode: 'readwrite', startIn: 'downloads' }); }
-        catch (e) { if (e && e.name === 'AbortError') throw e; h = await window.showDirectoryPicker({ mode: 'readwrite' }); }
-        dirHandle = h;
-        await kvSet('dirHandle', h);
-        backupDirty = true;
-        setBackupMsg(`✅ 已設定資料夾「${h.name}」：備份與 PDF 都會存到這裡`, 'ok');
-        await autoBackup();
-    } catch (e) {
-        if (e && e.name !== 'AbortError') setBackupMsg('❌ 這個資料夾系統不允許使用（例如「下載」本身）。請在選擇畫面進入 Download ➜ 新增資料夾「學習區」➜ 選它；若仍不行，改在「文件」裡建立「學習區」。', 'error');
-    }
-    updateBackupUI();
-}
-
-async function restoreAutoAccess() {
-    if (await dirPermission(true)) { setBackupMsg('✅ 已恢復自動備份', 'ok'); backupDirty = true; autoBackup(); }
-    else setBackupMsg('❌ 未取得資料夾權限', 'error');
-    updateBackupUI();
+    autoRunning = false;
 }
 
 function downloadBlob(blob, name) {
@@ -650,55 +517,61 @@ function downloadBlob(blob, name) {
     setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
+// ---- 手動備份：直接下載到手機「下載」資料夾（不需授權）----
 async function manualBackup() {
     setBackupMsg('');
-    const useDir = await ensureDirAccess();
-    if (!useDir && FS_OK) {
-        setBackupMsg(dirHandle ? '❌ 資料夾尚未授權，請按下方「🔓 恢復自動備份」' : '請先按上方「📁 設定「學習區」資料夾」（只需設定一次）', 'error');
-        updateBackupUI();
-        return;
-    }
-    const obj = await buildBackup();
-    const name = `學習區備份_${stamp(true)}.json`;
-    const blob = backupBlob(obj);
     try {
-        if (useDir) {
-            await writeFileTo(name, blob);
-            setBackupMsg(`✅ 已備份到「${dirHandle.name}」：${name}`, 'ok');
-            backupDirty = false;
-            return;
-        }
-        const f = new File([blob], name, { type: 'application/json' });
-        if (navigator.canShare && navigator.canShare({ files: [f] })) {
-            await navigator.share({ files: [f], title: name });
-            setBackupMsg('✅ 已開啟分享面板，請選擇要存放的位置', 'ok');
-        } else {
-            downloadBlob(blob, name);
-            setBackupMsg('✅ 已下載到手機「下載」資料夾', 'ok');
-        }
+        const obj = await buildBackup();
+        const name = `學習區備份_${stamp(true)}.json`;
+        downloadBlob(backupBlob(obj), name);
+        await kvSet('lastManualBackup', new Date().toISOString());
+        setBackupMsg(`✅ 已下載到「下載」資料夾：${name}`, 'ok');
     } catch (e) {
-        if (e && e.name !== 'AbortError') setBackupMsg('❌ 備份失敗：' + (e.message || e), 'error');
+        setBackupMsg('❌ 備份失敗：' + (e.message || e), 'error');
     }
+    updateBackupUI();
+}
+
+async function applyBackupObject(obj) {
+    await kvSet('prevSnapshot', await buildBackup());
+    for (const s of seats) await kvDel('rec:' + s);
+    seats = obj.seats.map(String).sort(sortSeats);
+    seatNames = {};
+    for (const s of seats) {
+        const r = obj.records[s];
+        if (r) { await kvSet('rec:' + s, r); seatNames[s] = r.studentName || ''; }
+    }
+    await kvSet('seats', seats);
+    currentSeat = seats[0];
+    await kvSet('lastSeat', currentSeat);
+    await loadRecordToForm(currentSeat);
+    renderTabs();
+}
+
+function validBackup(obj) {
+    return obj && obj.app === 'learn-record' && obj.records && Array.isArray(obj.seats);
 }
 
 async function restoreBackup(file) {
     try {
         const obj = JSON.parse(await file.text());
-        if (!obj || obj.app !== 'learn-record' || !obj.records || !Array.isArray(obj.seats)) throw new Error('這不是本系統的備份檔');
+        if (!validBackup(obj)) throw new Error('這不是本系統的備份檔');
         if (!confirm(`即將還原 ${obj.seats.length} 個座號的資料，會取代目前所有紀錄。\n（還原前會先自動留一份現況快照）\n確定要還原嗎？`)) return;
-        await kvSet('prevSnapshot', await buildBackup());
-        for (const s of seats) await kvDel('rec:' + s);
-        seats = obj.seats.map(String).sort(sortSeats);
-        seatNames = {};
-        for (const s of seats) {
-            const r = obj.records[s];
-            if (r) { await kvSet('rec:' + s, r); seatNames[s] = r.studentName || ''; }
-        }
-        await kvSet('seats', seats);
-        currentSeat = seats[0];
-        await kvSet('lastSeat', currentSeat);
-        await loadRecordToForm(currentSeat);
-        renderTabs();
+        await applyBackupObject(obj);
+        setBackupMsg(`✅ 已還原 ${seats.length} 個座號`, 'ok');
+    } catch (e) {
+        setBackupMsg('❌ 還原失敗：' + (e.message || e), 'error');
+    }
+}
+
+// ---- 從 App 內的自動備份還原 ----
+async function restoreFromAuto(idx) {
+    try {
+        const obj = await kvGet('autoBak' + idx);
+        if (!validBackup(obj)) throw new Error('這份自動備份是空的');
+        const when = new Date(obj.exportedAt).toLocaleString();
+        if (!confirm(`即將還原「${when}」的自動備份（${obj.seats.length} 個座號），會取代目前所有紀錄。\n（還原前會先自動留一份現況快照）\n確定要還原嗎？`)) return;
+        await applyBackupObject(obj);
         setBackupMsg(`✅ 已還原 ${seats.length} 個座號`, 'ok');
     } catch (e) {
         setBackupMsg('❌ 還原失敗：' + (e.message || e), 'error');
@@ -712,14 +585,27 @@ function setBackupMsg(text, type) {
 }
 
 async function updateBackupUI() {
-    let s;
-    if (!FS_OK) s = '此瀏覽器無法選擇資料夾：備份會用「分享 / 下載」。';
-    else if (!dirHandle) s = '尚未設定備份資料夾（設定後才會自動備份）。';
-    else if (await dirPermission(false)) s = `自動備份：開啟（資料夾「${dirHandle.name}」）。${lastAutoInfo}`;
-    else s = `⚠️ 資料夾「${dirHandle.name}」需要重新授權，自動備份暫停。`;
-    $('backupStatus').textContent = s;
-    $('restoreAccessBtn').style.display = (dirHandle && !(await dirPermission(false))) ? 'block' : 'none';
-    $('backupWarn').style.display = (dirHandle && !(await dirPermission(false))) ? 'inline' : 'none';
+    let last = '';
+    try {
+        const m = await kvGet('lastManualBackup');
+        last = m ? `最近下載備份：${new Date(m).toLocaleString()}` : '尚未下載過備份檔';
+    } catch (e) { /* ignore */ }
+    $('backupStatus').textContent = `自動備份：開啟（App 內保留最近 2 份，輪流覆寫）。${lastAutoInfo} ${last}`.trim();
+    // 自動備份還原按鈕
+    const box = $('autoSlotBox');
+    if (!box) return;
+    box.innerHTML = '';
+    for (const i of [0, 1]) {
+        let o = null;
+        try { o = await kvGet('autoBak' + i); } catch (e) { /* ignore */ }
+        if (!validBackup(o)) continue;
+        const b = document.createElement('button');
+        b.className = 'pdf-add-btn';
+        b.style.marginTop = '10px';
+        b.textContent = `🕘 還原自動備份：${new Date(o.exportedAt).toLocaleString()}`;
+        b.onclick = () => restoreFromAuto(i);
+        box.appendChild(b);
+    }
 }
 
 function openBackupModal() {
@@ -865,7 +751,7 @@ function buildPdf(pages) {
     return new Blob(chunks, { type: 'application/pdf' });
 }
 
-// 直接產生 PDF 並寫入「學習區」資料夾（版面與列印版相同；文字為圖片，無法選取）
+// 直接產生 PDF 並下載到手機「下載」資料夾（版面與列印版相同；文字為圖片，無法選取）
 async function renderPdfToFolder(order, fileName) {
     const css = buildPrintCss();
     const pages = [];
@@ -875,7 +761,7 @@ async function renderPdfToFolder(order, fileName) {
         const node = cloneFormSnapshot();
         pages.push(await renderPageToJpeg(node, css, 2.5));
     }
-    await writeFileTo(fileName + '.pdf', buildPdf(pages));
+    downloadBlob(buildPdf(pages), fileName + '.pdf');
 }
 
 async function exportPdf(mode) {
@@ -891,15 +777,7 @@ async function exportPdf(mode) {
         return;
     }
     const wantPrint = $('pdfUsePrint').checked;
-    let toFolder = false;
-    if (!wantPrint) {
-        if (!dirHandle && FS_OK) {
-            setPdfMsg('請先按下方「📁 設定「學習區」資料夾」（只需設定一次）', 'error');
-            return;
-        }
-        toFolder = !!dirHandle && await dirPermission(true);
-        if (dirHandle && !toFolder) { setPdfMsg('❌ 資料夾尚未授權，請再按一次，或重新設定資料夾', 'error'); return; }
-    }
+    const toFolder = !wantPrint;   // 直接下載到「下載」資料夾，不需授權
 
     pdfBusy = true;
     const original = currentSeat;
@@ -917,7 +795,7 @@ async function exportPdf(mode) {
                 await renderPdfToFolder(order, name);
                 await loadRecordToForm(original);
                 $('pdfMenuModal').style.display = 'none';
-                alert(`✅ 已存入「${dirHandle.name}」：${name}.pdf`);
+                alert(`✅ 已下載到「下載」資料夾：${name}.pdf`);
             } catch (e) {
                 console.error(e);
                 await loadRecordToForm(original);
