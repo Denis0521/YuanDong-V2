@@ -1452,6 +1452,11 @@
 #cropModal .crop-actions .c-ok { background:#2d3782; color:#fff; }
 #cropModal .crop-actions .c-full { background:#e6e8f6; color:#2d3782; }
 #cropModal .crop-actions .c-cancel { background:#eee; color:#555; }
+/* ===== 重點能力詞庫：關閉鈕固定在視窗右上角、標題列固定不隨清單捲動 ===== */
+#dictModal .modal-content { overflow: hidden; padding: 0; max-height: 80vh; display: flex; flex-direction: column; }
+#dictModal #dictView1, #dictModal #dictView2 { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; max-height: 80vh; padding: 0 25px 25px; box-sizing: border-box; }
+#dictModal .modal-title { position: sticky; top: 0; z-index: 3; margin-top: 0; padding-top: 25px; background: #fbfcff; }
+#dictModal > .modal-content > .modal-close { position: absolute; top: 14px; right: 14px; z-index: 5; }
 </style>
 </head>
 <body>
@@ -1630,8 +1635,8 @@
 
 <div class="modal-overlay" id="dictModal" onclick="closeDictModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeDictModal()" aria-label="關閉">✖</button>
         <div id="dictView1">
-            <button class="modal-close" onclick="closeDictModal()">✖</button>
             <h2 class="modal-title">💡 挑選重點能力區塊</h2>
             <p style="color: #666; font-size: 15px; margin-bottom: 0;">請點擊下方區塊，查看專屬的評語詞庫：</p>
             <div class="dict-grid">
@@ -1644,7 +1649,6 @@
             </div>
         </div>
         <div id="dictView2" style="display: none;">
-            <button class="modal-close" onclick="closeDictModal()">✖</button>
             <h2 class="modal-title" style="display: flex; align-items: center;">
                 <button onclick="backToDictHome()" style="margin-right: 15px; font-size: 15px; cursor: pointer; border: 1px solid #ccc; padding: 4px 10px; border-radius: 4px; background: #f0f0f0;">⬅ 返回</button>
                 <span id="dictCategoryTitle">美勞區</span>
@@ -1725,6 +1729,6 @@
     </div>
 </div>
 
-<script src="app.js?v=31" defer></script>
+<script src="app.js?v=32" defer></script>
 </body>
 </html>
