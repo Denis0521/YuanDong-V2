@@ -1,5 +1,5 @@
-// 版本升級至 v1.08（本機儲存版），網路優先 (Network First) 策略
-const CACHE_NAME = 'learn-record-v1.08';
+// 版本升級至 v1.09（本機儲存版），網路優先 (Network First) 策略
+const CACHE_NAME = 'learn-record-v1.09';
 const urlsToCache = [
   './',
   './index.html',
@@ -12,7 +12,7 @@ self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+      .then(cache => cache.addAll(urlsToCache.map(u => new Request(u, { cache: 'reload' }))))
       .catch(err => console.error('快取安裝失敗:', err))
   );
 });
@@ -44,7 +44,7 @@ self.addEventListener('fetch', event => {
   }
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })   // 略過瀏覽器 HTTP 快取，確保拿到最新檔案
       .then(networkResponse => {
         // 成功取得網路回應，更新快取
         return caches.open(CACHE_NAME).then(cache => {
