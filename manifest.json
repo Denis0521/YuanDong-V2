@@ -1,4 +1,5 @@
 {
+  "id": "./index.html",
   "name": "幼兒學習區紀錄系統",
   "short_name": "學習區紀錄",
   "start_url": "./index.html",
@@ -17,5 +18,7 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "scope": "./",
+  "lang": "zh-TW"
 }

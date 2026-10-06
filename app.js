@@ -177,6 +177,40 @@ function updateDocumentTitle() {
 
 
 
+
+// ==================== PWA 安裝提示 ====================
+(function () {
+    const banner = document.getElementById('installBanner');
+    if (!banner) return;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    if (isStandalone) return; // 已安裝/以 App 開啟，不顯示
+    let deferredPrompt = null;
+    const hide = () => { banner.style.display = 'none'; };
+    const show = () => { banner.style.display = 'flex'; };
+
+    window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        deferredPrompt = e;
+        show();
+    });
+    document.getElementById('installBtn').addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        hide();
+    });
+    document.getElementById('installClose').addEventListener('click', hide);
+    window.addEventListener('appinstalled', hide);
+
+    // iOS Safari 沒有安裝事件，顯示手動說明
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && !/Line\//i.test(navigator.userAgent)) {
+        document.getElementById('installText').textContent = '點下方「分享」→「加入主畫面」即可安裝';
+        document.getElementById('installBtn').style.display = 'none';
+        show();
+    }
+})();
+
 // ==================== 初始化 ====================
 window.addEventListener('load', async () => {
     if ('serviceWorker' in navigator) {

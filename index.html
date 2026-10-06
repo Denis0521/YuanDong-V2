@@ -7,6 +7,23 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 
+<script>
+// LINE 內建瀏覽器 → 改用外部瀏覽器（Android 優先 Chrome）
+(function () {
+  var ua = navigator.userAgent;
+  if (!/Line\//i.test(ua)) return;
+  var u = new URL(location.href);
+  var fb = new URL(u.href);
+  fb.searchParams.set('openExternalBrowser', '1');
+  if (/Android/i.test(ua)) {
+    location.replace('intent://' + u.host + u.pathname + u.search +
+      '#Intent;scheme=https;package=com.android.chrome;' +
+      'S.browser_fallback_url=' + encodeURIComponent(fb.toString()) + ';end');
+  } else if (!u.searchParams.has('openExternalBrowser')) {
+    location.replace(fb.toString());
+  }
+})();
+</script>
 <title>幼兒學習區紀錄</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1460,6 +1477,14 @@
 </style>
 </head>
 <body>
+<div id="installBanner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:99999;padding:12px 14px;background:#1a73e8;color:#fff;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 -2px 8px rgba(0,0,0,.25);font-size:15px">
+  <span id="installText">安裝「學習區紀錄」到主畫面，使用更方便</span>
+  <span style="display:flex;gap:8px;flex-shrink:0">
+    <button id="installBtn" style="padding:8px 14px;border:0;border-radius:6px;background:#fff;color:#1a73e8;font-weight:bold">安裝</button>
+    <button id="installClose" style="padding:8px 10px;border:0;border-radius:6px;background:transparent;color:#fff">✕</button>
+  </span>
+</div>
+
 
 <div class="toast" id="copyToast">✅ 已成功複製重點能力！</div>
 
