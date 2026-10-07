@@ -1609,7 +1609,7 @@
 <div class="modal-overlay" id="infoModal" onclick="closeInfo()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeInfo()">✖</button>
-        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">本機版</span></h2>
+        <h2 class="modal-title">遠東幼兒園學習區紀錄系統 <span class="version-tag">本機版 v1.16</span></h2>
 
         <div class="modal-section">
             <h3>📱 如何安裝至手機桌面 (免下載APP)</h3>
@@ -1630,8 +1630,9 @@
             <ul>
                 <li>手機若清除瀏覽器資料或移除 App，本機資料會一併消失，請務必備份。</li>
                 <li>自動備份：停止編輯約 30 秒後，在 App 內保留最近 <strong>2 份</strong>並輪流覆寫，不需任何授權。但它和資料存在同一處，清除瀏覽器資料時會一起消失。</li>
-                <li>「立即備份」會把備份檔直接下載到手機「下載」資料夾，請定期按；重複下載的檔名會自動加 (1)，可自行刪除舊檔。</li>
+                <li><strong>建議在刪除軟體或清理瀏覽器記錄之前，先按「立即備份」</strong>，並把備份檔保存到雲端或電腦。備份檔固定名為「學習區備份.json」：電腦版 Chrome / Edge 會覆寫同一個檔；手機會下載到「下載」資料夾，重複下載時檔名會自動加 (1)，可自行刪除舊檔。</li>
                 <li>「還原備份檔」選擇備份檔即可恢復；也可在備份視窗直接點「還原自動備份」。</li>
+                <li>若還原錯了，備份視窗會出現「↩️ 回到上次還原前」，可退回還原之前的資料。</li>
             </ul>
         </div>
         <div class="modal-section">
@@ -1755,6 +1756,6 @@
     </div>
 </div>
 
-<script src="app.js?v=35" defer></script>
+<script src="app.js?v=36" defer></script>
 </body>
 </html>

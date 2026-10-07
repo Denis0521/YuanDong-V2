@@ -2,6 +2,8 @@
 
 const $ = (id) => document.getElementById(id);
 
+const APP_VERSION = 'v1.16';   // 版本編號（同步更新 index.html 說明與 sw.js）
+
 // ==================== 本機資料庫 (IndexedDB) ====================
 const DB_NAME = 'learn-record-db', STORE = 'kv';
 let dbPromise = null;
@@ -735,6 +737,19 @@ async function restoreBackup(file) {
 }
 
 // ---- 從 App 內的自動備份還原 ----
+async function restoreFromSnapshot() {
+    try {
+        const obj = await kvGet('prevSnapshot');
+        if (!validBackup(obj)) throw new Error('沒有可還原的快照');
+        const when = new Date(obj.exportedAt).toLocaleString();
+        if (!confirm(`即將回到「${when}」（上一次還原前）的資料，會取代目前所有紀錄。\n（目前資料會先留成新的快照）\n確定要還原嗎？`)) return;
+        await applyBackupObject(obj);
+        setBackupMsg(`✅ 已回到還原前的資料（${seats.length} 個座號）`, 'ok');
+    } catch (e) {
+        setBackupMsg('❌ 還原失敗：' + (e.message || e), 'error');
+    }
+}
+
 async function restoreFromAuto(idx) {
     try {
         const obj = await kvGet('autoBak' + idx);
@@ -774,6 +789,17 @@ async function updateBackupUI() {
         b.style.marginTop = '10px';
         b.textContent = `🕘 還原自動備份：${new Date(o.exportedAt).toLocaleString()}`;
         b.onclick = () => restoreFromAuto(i);
+        box.appendChild(b);
+    }
+    // 還原前快照：還原錯了可以回到上一步
+    let snap = null;
+    try { snap = await kvGet('prevSnapshot'); } catch (e) { /* ignore */ }
+    if (validBackup(snap)) {
+        const b = document.createElement('button');
+        b.className = 'pdf-add-btn';
+        b.style.marginTop = '10px';
+        b.textContent = `↩️ 回到上次還原前：${new Date(snap.exportedAt).toLocaleString()}`;
+        b.onclick = restoreFromSnapshot;
         box.appendChild(b);
     }
 }
