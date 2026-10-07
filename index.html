@@ -1747,6 +1747,7 @@
         <h2 class="modal-title">💾 備份與還原</h2>
         <div class="seat-hint" id="backupStatus"></div>
         <input type="file" id="restoreInput" accept=".json,application/json" style="display:none;">
+        <div class="seat-hint" style="color:#d93025;margin:8px 0;">⚠️ 建議在「刪除軟體」或「清理瀏覽器記錄」之前，先按下方「立即備份」，並將備份檔保存到雲端或電腦。</div>
         <button class="pdf-add-btn" onclick="manualBackup()">⬆️ 立即備份</button>
         <button class="pdf-add-btn" onclick="document.getElementById('restoreInput').click()" style="margin-top:10px;">♻️ 還原備份檔</button>
         <div id="autoSlotBox"></div>
@@ -1754,6 +1755,6 @@
     </div>
 </div>
 
-<script src="app.js?v=32" defer></script>
+<script src="app.js?v=35" defer></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-// 版本升級至 v1.12（本機儲存版），網路優先 (Network First) 策略
-const CACHE_NAME = 'learn-record-v1.12';
+// 版本升級至 v1.15（本機儲存版），網路優先 (Network First) 策略
+const CACHE_NAME = 'learn-record-v1.15';
 const urlsToCache = [
   './',
   './index.html',

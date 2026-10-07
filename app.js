@@ -650,19 +650,56 @@ function downloadBlob(blob, name) {
     setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
+// 電腦版 Chrome/Edge：第一次選檔案位置，之後每次直接覆寫同一個檔。
+// 手機/iPhone 瀏覽器不支援，會退回一般下載（固定檔名）。
+async function saveBackupFile(blob, name) {
+    if (!window.showSaveFilePicker) { downloadBlob(blob, name); return 'download'; }
+    let h = null;
+    try {
+        h = await kvGet('backupHandle');
+        if (h) {
+            let p = await h.queryPermission({ mode: 'readwrite' });
+            if (p !== 'granted') p = await h.requestPermission({ mode: 'readwrite' });
+            if (p !== 'granted') h = null;
+        }
+    } catch (e) { h = null; }
+    if (!h) {
+        h = await showSaveFilePicker({
+            suggestedName: name,
+            types: [{ description: '備份檔', accept: { 'application/json': ['.json'] } }]
+        });
+        await kvSet('backupHandle', h);
+    }
+    try {
+        const w = await h.createWritable();
+        await w.write(blob);
+        await w.close();
+        return 'overwrite';
+    } catch (e) {   // 檔案被刪除/移動時，改回一般下載並重設
+        await kvDel('backupHandle');
+        downloadBlob(blob, name);
+        return 'download';
+    }
+}
+
 // ---- 手動備份：直接下載到手機「下載」資料夾（不需授權）----
 async function manualBackup() {
     setBackupMsg('');
     try {
         const obj = await buildBackup();
-        const name = `學習區備份_${stamp(true)}.json`;
-        downloadBlob(backupBlob(obj), name);
+        const name = '學習區備份.json';   // 固定檔名，不再每次產生新檔
+        const mode = await saveBackupFile(backupBlob(obj), name);
         await kvSet('lastManualBackup', new Date().toISOString());
-        setBackupMsg(`✅ 已下載到「下載」資料夾：${name}`, 'ok');
+        setBackupMsg(mode === 'overwrite'
+            ? `✅ 已覆寫備份檔：${name}`
+            : `✅ 已下載到「下載」資料夾：${name}（若已有同名檔，系統會自動加上 (1)）`, 'ok');
+        updateBackupUI();
+        return true;
     } catch (e) {
         setBackupMsg('❌ 備份失敗：' + (e.message || e), 'error');
+        updateBackupUI();
+        return false;
     }
-    updateBackupUI();
 }
 
 async function applyBackupObject(obj) {
